@@ -17,26 +17,34 @@ public class AJAXServer {
 		String wwwRoot = args.length > 0 ? args[0] : ".";
 
 		AJAXServer server = new AJAXServer(8080, wwwRoot);
+		List<AJAXConnection> connections = new ArrayList<>();
 		Map<Integer, Integer> pongs = new HashMap<>();
 
 		while (true) {
 			// TODO: Use a semaphore for hasPing so that we do not busy wait.
 			if (server.hasPing()) {
 				AJAXConnection connection;
-				while ((connection = server.accept()) != null) {
-					if (!pongs.containsKey(connection.getID()))
-						pongs.put(connection.getID(), 0);
-					if (pongs.get(connection.getID()) < 8)
-						connection.respond();
-					pongs.put(connection.getID(), pongs.get(connection.getID()) + 1);
+				while ((connection = server.accept()) != null)
+					connections.add(connection);
+
+				for (AJAXConnection c : connections) {
+					if (!pongs.containsKey(c.getID()))
+						pongs.put(c.getID(), 0);
+					if (pongs.get(c.getID()) < 8) {
+						c.respond();
+						c.respond();
+					}
+					pongs.put(c.getID(), pongs.get(c.getID()) + 1);
 				}
 			}
+			for (AJAXConnection c : connections) c.update();
 			try { Thread.sleep(10); } catch (InterruptedException e) {}
 		}
 	}
 
 	int nextConnectionID = 0;
-	private List<AJAXConnection> connections = new ArrayList<>();
+	private Map<Integer, AJAXConnection> connections = new HashMap<>();
+	private List<AJAXConnection> newConnections = new ArrayList<>();
 
 	private boolean ping;
 	public synchronized boolean hasPing() { boolean p = ping; ping = false; return p; }
@@ -86,8 +94,13 @@ public class AJAXServer {
 								break;
 							case "/pong":
 								// TODO: It should be an error for id to be -1; cookies must be off.
-								synchronized (connections) {
-									connections.add(new AJAXConnection(connection, id));
+								if (id == -1 || !connections.containsKey(id)) {
+									AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
+									synchronized (connections) { connections.put(id, ajaxConnection); }
+									synchronized (newConnections) { newConnections.add(ajaxConnection); }
+								} else {
+									AJAXConnection ajaxConnection = connections.get(id);
+									ajaxConnection.setSocket(connection);
 								}
 								break;
 							default:
@@ -124,9 +137,9 @@ public class AJAXServer {
 	}
 
 	public AJAXConnection accept() {
-		synchronized (connections) {
-			if (connections.isEmpty()) return null;
-			else return connections.remove(0);
+		synchronized (newConnections) {
+			if (newConnections.isEmpty()) return null;
+			else return newConnections.remove(0);
 		}
 	}
 
