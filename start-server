@@ -1,2 +1,2 @@
 #!/bin/sh
-cd src/server && java AJAXServer
+cd bin/server && java -ea AJAXServer
