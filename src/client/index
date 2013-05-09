@@ -15,25 +15,26 @@ document.getElementById('ping').addEventListener('click', function (e) {
 }, false);
 
 // TODO: Use a while loop and a synchronous XMLHttpRequest?
-function awaitPong() {
+function awaitPong(failures, maxFailures) {
 	request = new XMLHttpRequest();
-	request.onreadystatechange = pongRequestReadyStateChange;
+	request.onreadystatechange = function () {
+		// FIXME: Occasionally we lose the first response.
+		if (request.readyState == 4) {
+			if (request.status == 200) {
+				document.getElementById('pongs').appendChild(document.createTextNode('Pong!'));
+				document.getElementById('pongs').appendChild(document.createElement('br'));
+			} else {
+				failures++;
+			}
+
+			if (failures < maxFailures) awaitPong(failures, maxFailures);
+		}
+	};
 	request.open('GET', '/pong', true);
 	request.send(null);
 }
 
-// FIXME: Occasionally we lose the first response.
-function pongRequestReadyStateChange() {
-	if (request.readyState == 4) {
-		if (request.status == 200) {
-			document.getElementById('pongs').appendChild(document.createTextNode('Pong!'));
-			document.getElementById('pongs').appendChild(document.createElement('br'));
-		}
-		awaitPong();
-	}
-}
-
-awaitPong();
+awaitPong(0, 5);
 </script>
 </body>
 </html>

@@ -5,8 +5,12 @@ import java.net.Socket;
 public class AJAXConnection {
 	private Socket socket;
 
-	public AJAXConnection(Socket socket) {
+	private int id;
+	public int getID() { return id; }
+
+	public AJAXConnection(Socket socket, int id) {
 		this.socket = socket;
+		this.id = id;
 	}
 
 	public void respond() {
