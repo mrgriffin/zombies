@@ -12,7 +12,7 @@ public class AJAXConnection {
 	public void respond() {
 		try {
 			PrintStream ps = new PrintStream(socket.getOutputStream());
-			ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!\r\n");
+			ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPong.\r\n");
 			ps.flush();
 			socket.close();
 		} catch (IOException e) {

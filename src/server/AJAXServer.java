@@ -18,18 +18,19 @@ public class AJAXServer {
 		AJAXConnection lastConnection = null;
 
 		while (true) {
-			AJAXConnection connection = server.accept();
-			if (connection != null) {
-				if (lastConnection != null) lastConnection.respond();
-				lastConnection = connection;
+			// TODO: Use a semaphore for hasPing so that we do not busy wait.
+			if (server.hasPing()) {
+				AJAXConnection connection;
+				while ((connection = server.accept()) != null) connection.respond();
 			}
-
-			// TODO: Use a semaphore for accept so that we do not busy loop.
 			try { Thread.sleep(10); } catch (InterruptedException e) {}
 		}
 	}
 
 	private List<AJAXConnection> connections = new ArrayList<>();
+
+	private boolean ping;
+	public synchronized boolean hasPing() { boolean p = ping; ping = false; return p; }
 
 	public AJAXServer(int port, final String wwwRoot) {
 		try {
@@ -44,11 +45,19 @@ public class AJAXServer {
 							String method = readUntil(in, ' ');
 							String resource = readUntil(in, ' ');
 							String protocol = readUntil(in, '\r');
-							assert(method.equals("GET"));
-							assert(protocol.equals("HTTP/1.1"));
+							if (!method.equals("GET")) { connection.close(); continue; }
+							if (!protocol.equals("HTTP/1.1")) { connection.close(); continue; }
 
 							switch (resource) {
-							case "/poll":
+							case "/ping":
+								synchronized (this) {
+									ping = true;
+								}
+								{ PrintStream ps = new PrintStream(connection.getOutputStream());
+								ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPing.\r\n");
+								connection.close(); }
+								break;
+							case "/pong":
 								synchronized (connections) {
 									connections.add(new AJAXConnection(connection));
 								}
@@ -59,7 +68,7 @@ public class AJAXServer {
 								File resourceFile = new File(wwwRoot + resource);
 								if (resourceFile.canRead()) {
 									FileInputStream fin = new FileInputStream(resourceFile);
-									ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+									ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
 									while (fin.available() != 0) ps.write(fin.read());
 									ps.print("\r\n");
 									ps.flush();
