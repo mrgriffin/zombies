@@ -15,9 +15,14 @@ public class AJAXServer {
 		String wwwRoot = args.length > 0 ? args[0] : ".";
 
 		AJAXServer server = new AJAXServer(8080, wwwRoot);
+		AJAXConnection lastConnection = null;
+
 		while (true) {
 			AJAXConnection connection = server.accept();
-			if (connection != null) connection.respond();
+			if (connection != null) {
+				if (lastConnection != null) lastConnection.respond();
+				lastConnection = connection;
+			}
 
 			// TODO: Use a semaphore for accept so that we do not busy loop.
 			try { Thread.sleep(10); } catch (InterruptedException e) {}
