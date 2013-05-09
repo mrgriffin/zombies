@@ -1,0 +1,2 @@
+#!/bin/sh
+cd src/server && java AJAXServer
