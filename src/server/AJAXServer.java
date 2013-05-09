@@ -9,128 +9,113 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class AJAXServer {
-	public static void main(String[] args) {
-		String wwwRoot = args.length > 0 ? args[0] : ".";
-
-		AJAXServer server = new AJAXServer(8080, wwwRoot);
-		List<AJAXConnection> connections = new ArrayList<>();
-		Map<Integer, Integer> pongs = new HashMap<>();
-
-		while (true) {
-			// TODO: Use a semaphore for hasPing so that we do not busy wait.
-			if (server.hasPing()) {
-				AJAXConnection connection;
-				while ((connection = server.accept()) != null)
-					connections.add(connection);
-
-				for (AJAXConnection c : connections) {
-					if (!pongs.containsKey(c.getID()))
-						pongs.put(c.getID(), 0);
-					if (pongs.get(c.getID()) < 8) {
-						c.respond();
-						c.respond();
-					}
-					pongs.put(c.getID(), pongs.get(c.getID()) + 1);
-				}
-			}
-			for (AJAXConnection c : connections) c.update();
-			try { Thread.sleep(10); } catch (InterruptedException e) {}
-		}
-	}
+	Server server;
+	String wwwRoot;
 
 	int nextConnectionID = 0;
 	private Map<Integer, AJAXConnection> connections = new HashMap<>();
 	private List<AJAXConnection> newConnections = new ArrayList<>();
 
-	private boolean ping;
-	public synchronized boolean hasPing() { boolean p = ping; ping = false; return p; }
-
-	public AJAXServer(int port, final String wwwRoot) {
+	public AJAXServer(Server server, int port, String wwwRoot) {
+		this.server = server;
+		this.wwwRoot = wwwRoot;
 		try {
 			final ServerSocket socket = new ServerSocket(port);
-			Thread accepter = new Thread() {
+			new Thread() {
 				public void run() {
 					while (true) {
 						try {
-							Socket connection = socket.accept();
-							InputStream in = connection.getInputStream();
-
-							String method = readUntil(in, ' ');
-							String resource = readUntil(in, ' ');
-							String protocol = readUntil(in, '\r');
-							if (!method.equals("GET")) { connection.close(); continue; }
-							if (!protocol.equals("HTTP/1.1")) { connection.close(); continue; }
-
-							// TODO: Real HTTP header handling.
-							String cookie;
-							do {
-								readUntil(in, '\n');
-								cookie = readUntil(in, '\r');
-							} while (cookie.indexOf("Cookie: ") != 0 && !cookie.equals(""));
-
-							int id = -1;
-
-							if (!cookie.equals("")) {
-								String[] cookiePairs = cookie.substring(8).split(";");
-								for (String pair : cookiePairs) {
-									int i = pair.indexOf('=');
-									if (i != -1 && pair.substring(0, i).equals("id"))
-										id = Integer.parseInt(pair.substring(i + 1));
-								}
-							}
-
-							switch (resource) {
-							case "/ping":
-								synchronized (this) {
-									ping = true;
-								}
-								{ PrintStream ps = new PrintStream(connection.getOutputStream());
-								ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPing.\r\n");
-								connection.close(); }
-								break;
-							case "/pong":
-								// TODO: It should be an error for id to be -1; cookies must be off.
-								if (id == -1 || !connections.containsKey(id)) {
-									AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
-									synchronized (connections) { connections.put(id, ajaxConnection); }
-									synchronized (newConnections) { newConnections.add(ajaxConnection); }
-								} else {
-									AJAXConnection ajaxConnection = connections.get(id);
-									ajaxConnection.setSocket(connection);
-								}
-								break;
-							default:
-								// FIXME: Disallow resources that would read outside of wwwRoot (i.e. "..").
-								PrintStream ps = new PrintStream(connection.getOutputStream());
-								File resourceFile = new File(wwwRoot + resource);
-								if (resourceFile.canRead()) {
-									FileInputStream fin = new FileInputStream(resourceFile);
-									ps.print("HTTP/1.1 200 OK\r\n");
-									ps.print("Content-Type: text/html\r\n");
-									if (id == -1) ps.print("Set-Cookie: id=" + nextConnectionID++ + "\r\n");
-									ps.print("\r\n");
-									while (fin.available() != 0) ps.write(fin.read());
-									ps.print("\r\n");
-									ps.flush();
-									connection.close();
-									fin.close();
-								} else {
-									ps.print("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nSorry that file does not exist.\r\n");
-									ps.flush();
-									connection.close();
-								}
-							}
+							handleConnection(socket.accept());
 						} catch (IOException e) {
 							throw new RuntimeException(e);
 						}
 					}
 				}
-			};
-			accepter.start();
+			}.start();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void handleConnection(Socket connection) {
+		try {
+			InputStream in = connection.getInputStream();
+
+			String method = readUntil(in, ' ');
+			String resource = readUntil(in, ' ');
+			String protocol = readUntil(in, '\r');
+			if (!method.equals("GET")) { connection.close(); return; }
+			if (!protocol.equals("HTTP/1.1")) { connection.close(); return; }
+
+			// TODO: Real HTTP header handling.
+			String cookie;
+			do {
+				readUntil(in, '\n');
+				cookie = readUntil(in, '\r');
+			} while (cookie.indexOf("Cookie: ") != 0 && !cookie.equals(""));
+
+			int id = -1;
+
+			if (!cookie.equals("")) {
+				String[] cookiePairs = cookie.substring(8).split(";");
+				for (String pair : cookiePairs) {
+					int i = pair.indexOf('=');
+					if (i != -1 && pair.substring(0, i).equals("id"))
+						id = Integer.parseInt(pair.substring(i + 1));
+				}
+			}
+
+			switch (resource) {
+			case "/ping":
+				server.handlePing(id);
+				PrintStream ps = new PrintStream(connection.getOutputStream());
+				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPing.\r\n");
+				connection.close();
+				break;
+			case "/pong":
+				// TODO: It should be an error for id to be -1; cookies must be off.
+				if (id == -1 || !connections.containsKey(id)) {
+					AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
+					synchronized (connections) { connections.put(id, ajaxConnection); }
+					synchronized (newConnections) { newConnections.add(ajaxConnection); }
+				} else {
+					AJAXConnection ajaxConnection;
+					synchronized (connections) { ajaxConnection = connections.get(id); }
+					ajaxConnection.setSocket(connection);
+				}
+				break;
+			default:
+				handleStaticConnection(connection, id, resource);
+				break;
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void handleStaticConnection(Socket connection, int id, String resource) {
+		try {
+			// FIXME: Disallow resources that would read outside of wwwRoot (i.e. "..").
+			PrintStream ps = new PrintStream(connection.getOutputStream());
+			File resourceFile = new File(wwwRoot + resource);
+			if (resourceFile.canRead()) {
+				FileInputStream fin = new FileInputStream(resourceFile);
+				ps.print("HTTP/1.1 200 OK\r\n");
+				ps.print("Content-Type: text/html\r\n");
+				if (id == -1) ps.print("Set-Cookie: id=" + nextConnectionID++ + "\r\n");
+				ps.print("\r\n");
+				while (fin.available() != 0) ps.write(fin.read());
+				ps.print("\r\n");
+				ps.flush();
+				connection.close();
+				fin.close();
+			} else {
+				ps.print("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nSorry that file does not exist.\r\n");
+				ps.flush();
+				connection.close();
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

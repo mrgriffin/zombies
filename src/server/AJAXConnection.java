@@ -16,7 +16,7 @@ public class AJAXConnection {
 		this.send = 0;
 	}
 
-	public void respond() {
+	public void pong() {
 		send++;
 	}
 
