@@ -67,6 +67,7 @@ public class AJAXServer {
 									fin.close();
 								} else {
 									ps.print("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nSorry that file does not exist.\r\n");
+									ps.flush();
 									connection.close();
 								}
 							}
