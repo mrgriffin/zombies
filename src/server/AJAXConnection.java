@@ -11,7 +11,9 @@ public class AJAXConnection {
 
 	public void respond() {
 		try {
-			new PrintStream(socket.getOutputStream()).print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!\r\n");
+			PrintStream ps = new PrintStream(socket.getOutputStream());
+			ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!\r\n");
+			ps.flush();
 			socket.close();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
