@@ -6,14 +6,37 @@
 </head>
 <body>
 <div id="messages"><h1>Messages</h1></div>
-<input id="message" type="text"><input id="send" type="button" value="Send">
+<input id="message" type="text"><input id="cmd" type="button" value="Join">
 <script>
-document.getElementById('send').addEventListener('click', function (e) {
+var connected = false;
+
+function doChat() {
+	if (!connected) joinRoom();
+	else sendMessage();
+}
+
+function joinRoom() {
+	var request = new XMLHttpRequest();
+	request.onreadystatechange = function () {
+		if (request.readyState == 4 && request.status == 200) {
+			document.getElementById('cmd').value = 'Send';
+			connected = true;
+		}
+	};
+	request.open('POST', '/join', true);
+	request.send(document.getElementById('message').value);
+	document.getElementById('message').value = "";
+}
+
+function sendMessage() {
 	var request = new XMLHttpRequest();
 	request.open('POST', '/chat', true);
 	request.send(document.getElementById('message').value);
 	document.getElementById('message').value = "";
-}, false);
+}
+
+document.getElementById('cmd').addEventListener('click', doChat, false);
+document.getElementById('message').addEventListener('keydown', function (e) { if (e.keyCode == 13) doChat(); }, false);
 
 // TODO: Use a while loop and a synchronous XMLHttpRequest?
 function update(failures, maxFailures) {

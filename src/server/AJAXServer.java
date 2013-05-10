@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.ServerSocket;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class AJAXServer {
@@ -16,7 +14,6 @@ public class AJAXServer {
 
 	int nextConnectionID = 0;
 	private Map<Integer, AJAXConnection> connections = new HashMap<>();
-	private List<AJAXConnection> newConnections = new ArrayList<>();
 
 	public AJAXServer(Server server, int port, String wwwRoot) {
 		this.server = server;
@@ -80,30 +77,47 @@ public class AJAXServer {
 			}
 
 			switch (resource) {
-			case "/chat":
+			case "/join": {
 				if (!method.equals("POST")) { connection.close(); return; }
+				AJAXConnection ajaxConnection;
+				synchronized (connections) {
+					if (!connections.containsKey(id)) return;
+					ajaxConnection = connections.get(id);
+				}
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				server.handleChat(id, content);
+				server.handleJoin(ajaxConnection, content);
 				break;
-			case "/update":
+			} case "/chat": {
+				if (!method.equals("POST")) { connection.close(); return; }
+				AJAXConnection ajaxConnection;
+				synchronized (connections) {
+					if (!connections.containsKey(id)) return;
+					ajaxConnection = connections.get(id);
+				}
+				PrintStream ps = new PrintStream(connection.getOutputStream());
+				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
+				connection.close();
+				server.handleChat(ajaxConnection, content);
+				break;
+			} case "/update": {
 				if (!method.equals("GET")) { connection.close(); return; }
 				// TODO: It should be an error for id to be -1; cookies must be off.
 				if (id == -1 || !connections.containsKey(id)) {
 					AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
 					synchronized (connections) { connections.put(id, ajaxConnection); }
-					synchronized (newConnections) { newConnections.add(ajaxConnection); }
 				} else {
 					AJAXConnection ajaxConnection;
 					synchronized (connections) { ajaxConnection = connections.get(id); }
 					ajaxConnection.setSocket(connection);
 				}
 				break;
-			default:
+			} default: {
 				if (!method.equals("GET")) { connection.close(); return; }
 				handleStaticConnection(connection, id, resource);
 				break;
+			}
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -133,13 +147,6 @@ public class AJAXServer {
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
-		}
-	}
-
-	public AJAXConnection accept() {
-		synchronized (newConnections) {
-			if (newConnections.isEmpty()) return null;
-			else return newConnections.remove(0);
 		}
 	}
 
