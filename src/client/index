@@ -38,15 +38,25 @@ function sendMessage() {
 document.getElementById('cmd').addEventListener('click', doChat, false);
 document.getElementById('message').addEventListener('keydown', function (e) { if (e.keyCode == 13) doChat(); }, false);
 
-// TODO: Use a while loop and a synchronous XMLHttpRequest?
+function handleJoin(name) {
+	var message = document.createElement('em');
+	message.appendChild(document.createTextNode(name + ' has joined the room.'));
+	document.getElementById('messages').appendChild(message);
+	document.getElementById('messages').appendChild(document.createElement('br'));
+}
+
+function handleMessage(message) {
+	document.getElementById('messages').appendChild(document.createTextNode(message));
+	document.getElementById('messages').appendChild(document.createElement('br'));
+}
+
 function update(failures, maxFailures) {
 	var request = new XMLHttpRequest();
 	request.onreadystatechange = function () {
 		// FIXME: Occasionally we lose the first response.
 		if (request.readyState == 4) {
 			if (request.status == 200) {
-				document.getElementById('messages').appendChild(document.createTextNode(request.responseText));
-				document.getElementById('messages').appendChild(document.createElement('br'));
+				eval(request.responseText);
 			} else {
 				failures++;
 			}

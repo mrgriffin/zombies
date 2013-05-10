@@ -59,7 +59,7 @@ public class AJAXServer {
 			String content = "";
 			if (headers.containsKey("Content-Length")) {
 				int contentLength = Integer.parseInt(headers.get("Content-Length"));
-				StringBuffer sb = new StringBuffer();
+				StringBuffer sb = new StringBuffer(contentLength);
 				for (int i = 0; i < contentLength; i++) sb.append((char)in.read());
 				content = sb.toString();
 			}
