@@ -2,39 +2,40 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ping example</title>
+<title>Chat example</title>
 </head>
 <body>
-<div id="pongs"><h1>Pongs</h1></div>
-<input id="ping" type="button" value="Ping!">
+<div id="messages"><h1>Messages</h1></div>
+<input id="message" type="text"><input id="send" type="button" value="Send">
 <script>
-document.getElementById('ping').addEventListener('click', function (e) {
-	request = new XMLHttpRequest();
-	request.open('GET', '/ping', true);
-	request.send(null);
+document.getElementById('send').addEventListener('click', function (e) {
+	var request = new XMLHttpRequest();
+	request.open('POST', '/chat', true);
+	request.send(document.getElementById('message').value);
+	document.getElementById('message').value = "";
 }, false);
 
 // TODO: Use a while loop and a synchronous XMLHttpRequest?
-function awaitPong(failures, maxFailures) {
-	request = new XMLHttpRequest();
+function update(failures, maxFailures) {
+	var request = new XMLHttpRequest();
 	request.onreadystatechange = function () {
 		// FIXME: Occasionally we lose the first response.
 		if (request.readyState == 4) {
 			if (request.status == 200) {
-				document.getElementById('pongs').appendChild(document.createTextNode('Pong!'));
-				document.getElementById('pongs').appendChild(document.createElement('br'));
+				document.getElementById('messages').appendChild(document.createTextNode(request.responseText));
+				document.getElementById('messages').appendChild(document.createElement('br'));
 			} else {
 				failures++;
 			}
 
-			if (failures < maxFailures) awaitPong(failures, maxFailures);
+			if (failures < maxFailures) update(failures, maxFailures);
 		}
 	};
-	request.open('GET', '/pong', true);
+	request.open('GET', '/update', true);
 	request.send(null);
 }
 
-awaitPong(0, 5);
+update(0, 5);
 </script>
 </body>
 </html>

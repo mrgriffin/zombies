@@ -46,20 +46,32 @@ public class AJAXServer {
 			String method = readUntil(in, ' ');
 			String resource = readUntil(in, ' ');
 			String protocol = readUntil(in, '\r');
-			if (!method.equals("GET")) { connection.close(); return; }
 			if (!protocol.equals("HTTP/1.1")) { connection.close(); return; }
 
 			// TODO: Real HTTP header handling.
-			String cookie;
+			Map<String, String> headers = new HashMap<>();
+			String header;
 			do {
 				readUntil(in, '\n');
-				cookie = readUntil(in, '\r');
-			} while (cookie.indexOf("Cookie: ") != 0 && !cookie.equals(""));
+				header = readUntil(in, '\r');
+				int i = header.indexOf(':');
+				if (i != -1) headers.put(header.substring(0, i), header.substring(i + 2));
+			} while (!header.equals(""));
+			readUntil(in, '\n');
+
+			String content = "";
+			if (headers.containsKey("Content-Length")) {
+				int contentLength = Integer.parseInt(headers.get("Content-Length"));
+				StringBuffer sb = new StringBuffer();
+				for (int i = 0; i < contentLength; i++) sb.append((char)in.read());
+				content = sb.toString();
+			}
 
 			int id = -1;
 
+			String cookie = headers.containsKey("Cookie") ? headers.get("Cookie") : "";
 			if (!cookie.equals("")) {
-				String[] cookiePairs = cookie.substring(8).split(";");
+				String[] cookiePairs = cookie.split(";");
 				for (String pair : cookiePairs) {
 					int i = pair.indexOf('=');
 					if (i != -1 && pair.substring(0, i).equals("id"))
@@ -68,13 +80,15 @@ public class AJAXServer {
 			}
 
 			switch (resource) {
-			case "/ping":
-				server.handlePing(id);
+			case "/chat":
+				if (!method.equals("POST")) { connection.close(); return; }
 				PrintStream ps = new PrintStream(connection.getOutputStream());
-				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPing.\r\n");
+				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
+				server.handleChat(id, content);
 				break;
-			case "/pong":
+			case "/update":
+				if (!method.equals("GET")) { connection.close(); return; }
 				// TODO: It should be an error for id to be -1; cookies must be off.
 				if (id == -1 || !connections.containsKey(id)) {
 					AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
@@ -87,6 +101,7 @@ public class AJAXServer {
 				}
 				break;
 			default:
+				if (!method.equals("GET")) { connection.close(); return; }
 				handleStaticConnection(connection, id, resource);
 				break;
 			}

@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AJAXConnection {
 	private Socket socket;
@@ -8,29 +10,27 @@ public class AJAXConnection {
 	private int id;
 	public int getID() { return id; }
 
-	private int send;
+	private List<String> messages = new ArrayList<>();
 
 	public AJAXConnection(Socket socket, int id) {
 		this.socket = socket;
 		this.id = id;
-		this.send = 0;
 	}
 
-	public void pong() {
-		send++;
+	public void sendMessage(String message) {
+		messages.add(message);
 	}
 
 	public void update() {
-		if (send > 0 && !socket.isClosed()) {
+		if (!messages.isEmpty() && !socket.isClosed()) {
 			try {
 				PrintStream ps = new PrintStream(socket.getOutputStream());
-				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPong.\r\n");
+				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n" + messages.remove(0) + "\r\n");
 				ps.flush();
 				socket.close();
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-			send--;
 		}
 	}
 
