@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <title>Chat example</title>
+<style>
+#messages { position: relative; }
+#ping { position: absolute; top: 0; right: 0; }
+</style>
 </head>
 <body>
-<div id="messages"><h1>Messages</h1></div>
+<div id="messages"><h1>Messages</h1><span id="ping"></span></div>
 <input id="message" type="text"><input id="cmd" type="button" value="Join">
 <script>
 var connected = false;
@@ -48,6 +52,10 @@ function handleJoin(name) {
 function handleMessage(message) {
 	document.getElementById('messages').appendChild(document.createTextNode(message));
 	document.getElementById('messages').appendChild(document.createElement('br'));
+}
+
+function handlePing(ping) {
+	document.getElementById('ping').innerHTML = 'Ping: ' + ping;
 }
 
 function update(failures, maxFailures) {
