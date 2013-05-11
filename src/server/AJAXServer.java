@@ -76,6 +76,8 @@ public class AJAXServer {
 				}
 			}
 
+			// TODO: Rather than close the connection on failure we should return a 4XX code.
+
 			switch (resource) {
 			case "/join": {
 				if (!method.equals("POST")) { connection.close(); return; }
@@ -89,17 +91,21 @@ public class AJAXServer {
 				connection.close();
 				server.handleJoin(ajaxConnection, content);
 				break;
-			} case "/chat": {
+			} case "/state": {
 				if (!method.equals("POST")) { connection.close(); return; }
 				AJAXConnection ajaxConnection;
 				synchronized (connections) {
 					if (!connections.containsKey(id)) return;
 					ajaxConnection = connections.get(id);
 				}
+				String[] parts = content.split(",");
+				if (parts.length != 4) { connection.close(); return; }
+				int[] state = new int[parts.length];
+				for (int i = 0; i < parts.length; ++i) state[i] = (int)Float.parseFloat(parts[i]);
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				server.handleChat(ajaxConnection, content);
+				server.handleState(ajaxConnection, state[0], state[1], state[2], state[3]);
 				break;
 			} case "/update": {
 				if (!method.equals("GET")) { connection.close(); return; }

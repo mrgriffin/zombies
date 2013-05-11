@@ -27,8 +27,12 @@ public class AJAXConnection {
 		packets.add("handleMessage('" + message + "');");
 	}
 
-	public void sendJoin(String name) {
-		packets.add("handleJoin('" + name + "');");
+	public void sendJoin(String name, int x, int y, int vx, int vy) {
+		packets.add("handleJoin('" + name + "'," + x + "," + y + "," + vx + "," + vy + ");");
+	}
+
+	public void sendState(String name, int x, int y, int vx, int vy) {
+		packets.add("handleState('" + name + "'," + x + "," + y + "," + vx + "," + vy + ");");
 	}
 
 	public void update() {

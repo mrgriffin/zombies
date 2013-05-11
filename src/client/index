@@ -2,56 +2,83 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Chat example</title>
+<title>Game example</title>
 <style>
-#messages { position: relative; }
+#viewport { position: relative; }
 #ping { position: absolute; top: 0; right: 0; }
 </style>
 </head>
 <body>
-<div id="messages"><h1>Messages</h1><span id="ping"></span></div>
-<input id="message" type="text"><input id="cmd" type="button" value="Join">
+<canvas id="viewport" width="500" height="500"><span id="ping"></span></canvas>
+<br><input id="name" type="text"><input id="join" type="button" value="Join">
 <script>
-var connected = false;
+var self = null;
+var players = {};
 
-function doChat() {
-	if (!connected) joinRoom();
-	else sendMessage();
+function Player(name, x, y, vx, vy) {
+	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
 }
+
+Player.prototype.setState = function (x, y, vx, vy) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+};
+
+window.addEventListener('keydown', function (e) {
+	if (!self) return;
+	switch (e.keyCode) {
+		case 38: self.vy = -1; break; // Up.
+		case 39: self.vx =  1; break; // Right.
+		case 40: self.vy =  1; break; // Down.
+		case 37: self.vx = -1; break; // Left.
+	}
+	// TODO: Only send an update if our state has changed.
+	sendState();
+}, false);
+
+window.addEventListener('keyup', function (e) {
+	if (!self) return;
+	switch (e.keyCode) {
+		case 38: case 40: self.vy = 0; break; // Up/Down.
+		case 39: case 37: self.vx = 0; break; // Right/Left.
+	}
+	// TODO: Only send an update if our state has changed.
+	sendState();
+}, false);
+
+/* Send messages to the server. */
 
 function joinRoom() {
 	var request = new XMLHttpRequest();
 	request.onreadystatechange = function () {
 		if (request.readyState == 4 && request.status == 200) {
-			document.getElementById('cmd').value = 'Send';
-			connected = true;
+			document.getElementById('name').disabled = true;
+			document.getElementById('join').disabled = true;
 		}
 	};
 	request.open('POST', '/join', true);
-	request.send(document.getElementById('message').value);
-	document.getElementById('message').value = "";
+	request.send(document.getElementById('name').value);
 }
 
-function sendMessage() {
+document.getElementById('join').addEventListener('click', joinRoom, false);
+document.getElementById('name').addEventListener('keydown', function (e) { if (e.keyCode == 13) joinRoom(); }, false);
+
+function sendState() {
 	var request = new XMLHttpRequest();
-	request.open('POST', '/chat', true);
-	request.send(document.getElementById('message').value);
-	document.getElementById('message').value = "";
+	request.open('POST', '/state', true);
+	request.send(self.x + ',' + self.y + ',' + self.vx + ',' + self.vy);
 }
 
-document.getElementById('cmd').addEventListener('click', doChat, false);
-document.getElementById('message').addEventListener('keydown', function (e) { if (e.keyCode == 13) doChat(); }, false);
+/* Handle messages from the server. */
 
-function handleJoin(name) {
-	var message = document.createElement('em');
-	message.appendChild(document.createTextNode(name + ' has joined the room.'));
-	document.getElementById('messages').appendChild(message);
-	document.getElementById('messages').appendChild(document.createElement('br'));
+function handleJoin(name, x, y, vx, vy) {
+	players[name] = new Player(name, x, y, vx, vy);
+	// FIXME: This would allow someone with our name to override us.
+	if (name == document.getElementById('name').value)
+		self = players[name];
 }
 
-function handleMessage(message) {
-	document.getElementById('messages').appendChild(document.createTextNode(message));
-	document.getElementById('messages').appendChild(document.createElement('br'));
+function handleState(name, x, y, vx, vy) {
+	players[name].setState(x, y, vx, vy);
 }
 
 function handlePing(ping) {
@@ -77,6 +104,28 @@ function update(failures, maxFailures) {
 }
 
 update(0, 5);
+
+/* Render. */
+
+var dt = 1000 / 60;
+
+function render() {
+	var canvas = document.getElementById('viewport');
+	canvas.width = canvas.width;
+	var context = canvas.getContext('2d');
+	for (var player in players) {
+		if (!players.hasOwnProperty(player)) continue;
+		var p = players[player];
+		p.x += p.vx * dt;
+		p.y += p.vy * dt;
+		context.fillStyle = '#ff7f00';
+		context.beginPath();
+		context.arc(p.x - 12, p.y - 12, 11, 0, 2 * Math.PI, false);
+		context.fill();
+	}
+}
+
+setInterval(render, dt);
 </script>
 </body>
 </html>
