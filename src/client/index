@@ -26,10 +26,10 @@ Player.prototype.setState = function (x, y, vx, vy) {
 window.addEventListener('keydown', function (e) {
 	if (!self) return;
 	switch (e.keyCode) {
-		case 38: self.vy = -1; break; // Up.
-		case 39: self.vx =  1; break; // Right.
-		case 40: self.vy =  1; break; // Down.
-		case 37: self.vx = -1; break; // Left.
+		case 38: self.vy = -100; break; // Up.
+		case 39: self.vx =  100; break; // Right.
+		case 40: self.vy =  100; break; // Down.
+		case 37: self.vx = -100; break; // Left.
 	}
 	// TODO: Only send an update if our state has changed.
 	sendState();
@@ -65,7 +65,7 @@ document.getElementById('name').addEventListener('keydown', function (e) { if (e
 function sendState() {
 	var request = new XMLHttpRequest();
 	request.open('POST', '/state', true);
-	request.send(self.x + ',' + self.y + ',' + self.vx + ',' + self.vy);
+	request.send(self.vx + ',' + self.vy);
 }
 
 /* Handle messages from the server. */
@@ -116,8 +116,8 @@ function render() {
 	for (var player in players) {
 		if (!players.hasOwnProperty(player)) continue;
 		var p = players[player];
-		p.x += p.vx * dt;
-		p.y += p.vy * dt;
+		/*p.x += p.vx * dt;
+		p.y += p.vy * dt;*/
 		context.fillStyle = '#ff7f00';
 		context.beginPath();
 		context.arc(p.x - 12, p.y - 12, 11, 0, 2 * Math.PI, false);

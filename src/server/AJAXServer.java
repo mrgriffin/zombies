@@ -66,9 +66,8 @@ public class AJAXServer {
 
 			int id = -1;
 
-			String cookie = headers.containsKey("Cookie") ? headers.get("Cookie") : "";
-			if (!cookie.equals("")) {
-				String[] cookiePairs = cookie.split(";");
+			if (headers.containsKey("Cookie")) {
+				String[] cookiePairs = headers.get("Cookie").split(";");
 				for (String pair : cookiePairs) {
 					int i = pair.indexOf('=');
 					if (i != -1 && pair.substring(0, i).equals("id"))
@@ -99,13 +98,13 @@ public class AJAXServer {
 					ajaxConnection = connections.get(id);
 				}
 				String[] parts = content.split(",");
-				if (parts.length != 4) { connection.close(); return; }
-				int[] state = new int[parts.length];
-				for (int i = 0; i < parts.length; ++i) state[i] = (int)Float.parseFloat(parts[i]);
+				if (parts.length != 2) { connection.close(); return; }
+				double[] state = new double[parts.length];
+				for (int i = 0; i < parts.length; ++i) state[i] = Double.parseDouble(parts[i]);
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				server.handleState(ajaxConnection, state[0], state[1], state[2], state[3]);
+				server.handleState(ajaxConnection, state[0], state[1]);
 				break;
 			} case "/update": {
 				if (!method.equals("GET")) { connection.close(); return; }

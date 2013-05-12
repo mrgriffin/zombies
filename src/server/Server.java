@@ -12,9 +12,17 @@ public class Server {
 
 	public Server(int port, String wwwRoot) {
 		AJAXServer server = new AJAXServer(this, port, wwwRoot);
+		double dt = 1.0 / 60.0;
 		while (true) {
-			synchronized (players) { for (AJAXConnection connection : players.keySet()) connection.update(); }
-			try { Thread.sleep(10); } catch (InterruptedException e) {}
+			synchronized (players) {
+				for (Map.Entry<AJAXConnection, Player> entry : players.entrySet()) {
+					Player player = entry.getValue();
+					player.update(dt);
+					for (AJAXConnection other : players.keySet()) other.sendState(player.name, player.x, player.y, player.vx, player.vy);
+					entry.getKey().update();
+				}
+			}
+			try { Thread.sleep((int)(dt * 1000)); } catch (InterruptedException e) {}
 		}
 	}
 
@@ -41,17 +49,12 @@ public class Server {
 	}
 
 	// TODO: Have the server be authorative; accept key presses as updates.
-	void handleState(AJAXConnection connection, int x, int y, int vx, int vy) {
+	void handleState(AJAXConnection connection, double vx, double vy) {
 		synchronized (players) {
 			if (!players.containsKey(connection)) return;
 			Player player = players.get(connection);
-			player.x = x;
-			player.y = y;
 			player.vx = vx;
 			player.vy = vy;
-			for (AJAXConnection connection_ : players.keySet())
-				if (connection != connection_)
-					connection_.sendState(player.name, player.x, player.y, player.vx, player.vy);
 		}
 	}
 }
