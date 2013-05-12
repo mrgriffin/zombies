@@ -80,11 +80,8 @@ public class AJAXServer {
 			switch (resource) {
 			case "/join": {
 				if (!method.equals("POST")) { connection.close(); return; }
-				AJAXConnection ajaxConnection;
-				synchronized (connections) {
-					if (!connections.containsKey(id)) return;
-					ajaxConnection = connections.get(id);
-				}
+				if (!connections.containsKey(id)) return;
+				AJAXConnection ajaxConnection = connections.get(id);
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
@@ -92,11 +89,8 @@ public class AJAXServer {
 				break;
 			} case "/state": {
 				if (!method.equals("POST")) { connection.close(); return; }
-				AJAXConnection ajaxConnection;
-				synchronized (connections) {
-					if (!connections.containsKey(id)) return;
-					ajaxConnection = connections.get(id);
-				}
+				if (!connections.containsKey(id)) return;
+				AJAXConnection ajaxConnection = connections.get(id);
 				String[] parts = content.split(",");
 				if (parts.length != 2) { connection.close(); return; }
 				double[] state = new double[parts.length];
@@ -111,10 +105,10 @@ public class AJAXServer {
 				// TODO: It should be an error for id to be -1; cookies must be off.
 				if (id == -1 || !connections.containsKey(id)) {
 					AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
-					synchronized (connections) { connections.put(id, ajaxConnection); }
+					connections.put(id, ajaxConnection); 
 				} else {
 					AJAXConnection ajaxConnection;
-					synchronized (connections) { ajaxConnection = connections.get(id); }
+					ajaxConnection = connections.get(id);
 					ajaxConnection.setSocket(connection);
 				}
 				break;
