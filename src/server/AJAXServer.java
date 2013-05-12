@@ -5,18 +5,18 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class AJAXServer {
-	Server server;
 	String wwwRoot;
 
 	int nextConnectionID = 0;
 	private Map<Integer, AJAXConnection> connections = new HashMap<>();
 
-	public AJAXServer(Server server, int port, String wwwRoot) {
-		this.server = server;
+	public AJAXServer(int port, String wwwRoot) {
 		this.wwwRoot = wwwRoot;
 		try {
 			final ServerSocket socket = new ServerSocket(port);
@@ -36,7 +36,11 @@ public class AJAXServer {
 		}
 	}
 
-	private void handleConnection(Socket connection) {
+	public synchronized void update(Server server) {
+		for (AJAXConnection connection : connections.values()) connection.update(server);
+	}
+
+	private synchronized void handleConnection(Socket connection) {
 		try {
 			InputStream in = connection.getInputStream();
 
@@ -85,7 +89,7 @@ public class AJAXServer {
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				server.handleJoin(ajaxConnection, content);
+				ajaxConnection.recvJoin(content);
 				break;
 			} case "/state": {
 				if (!method.equals("POST")) { connection.close(); return; }
@@ -98,14 +102,15 @@ public class AJAXServer {
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				server.handleState(ajaxConnection, state[0], state[1]);
+				ajaxConnection.recvState(state[0], state[1]);
 				break;
+			// TODO: Add a /connect resource that initializes the AJAXConnection.
 			} case "/update": {
 				if (!method.equals("GET")) { connection.close(); return; }
 				// TODO: It should be an error for id to be -1; cookies must be off.
 				if (id == -1 || !connections.containsKey(id)) {
 					AJAXConnection ajaxConnection = new AJAXConnection(connection, id);
-					connections.put(id, ajaxConnection); 
+					connections.put(id, ajaxConnection);
 				} else {
 					AJAXConnection ajaxConnection;
 					ajaxConnection = connections.get(id);

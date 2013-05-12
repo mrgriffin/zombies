@@ -11,50 +11,42 @@ public class Server {
 	private Map<AJAXConnection, Player> players = new HashMap<>();
 
 	public Server(int port, String wwwRoot) {
-		AJAXServer server = new AJAXServer(this, port, wwwRoot);
+		AJAXServer server = new AJAXServer(port, wwwRoot);
 		double dt = 1.0 / 60.0;
 		while (true) {
-			synchronized (players) {
-				for (Map.Entry<AJAXConnection, Player> entry : players.entrySet()) {
-					Player player = entry.getValue();
-					player.update(dt);
-					for (AJAXConnection other : players.keySet()) other.sendState(player);
-					entry.getKey().update();
-				}
+			for (Map.Entry<AJAXConnection, Player> entry : players.entrySet()) {
+				Player player = entry.getValue();
+				player.update(dt);
+				for (AJAXConnection other : players.keySet()) other.sendState(player);
 			}
+			server.update(this);
 			try { Thread.sleep((int)(dt * 1000)); } catch (InterruptedException e) {}
 		}
 	}
 
 	void handleJoin(AJAXConnection connection, String name) {
-		synchronized (players) {
-			if (!players.containsKey(connection)) {
-				Player player = new Player(name, 250, 250, 0, 0);
-				for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
-					Player otherPlayer = other.getValue();
-					connection.sendJoin(otherPlayer);
-					other.getKey().sendJoin(player);
-				}
-				players.put(connection, player);
-				connection.sendJoin(player);
+		if (!players.containsKey(connection)) {
+			Player player = new Player(name, 250, 250, 0, 0);
+			for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
+				Player otherPlayer = other.getValue();
+				connection.sendJoin(otherPlayer);
+				other.getKey().sendJoin(player);
 			}
+			players.put(connection, player);
+			connection.sendJoin(player);
 		}
 	}
 
 	void handleChat(AJAXConnection connection, String message) {
-		synchronized (players) {
-			if (!players.containsKey(connection)) return;
-			for (AJAXConnection connection_ : players.keySet()) connection_.sendMessage(players.get(connection).name + ": " + message);
-		}
+		if (!players.containsKey(connection)) return;
+		for (AJAXConnection connection_ : players.keySet()) connection_.sendMessage(players.get(connection).name + ": " + message);
 	}
 
 	// TODO: Have the server be authorative; accept key presses as updates.
 	void handleState(AJAXConnection connection, double vx, double vy) {
-		synchronized (players) {
-			if (!players.containsKey(connection)) return;
-			Player player = players.get(connection);
-			player.vx = vx;
-			player.vy = vy;
-		}
+		if (!players.containsKey(connection)) return;
+		Player player = players.get(connection);
+		player.vx = vx;
+		player.vy = vy;
 	}
 }
