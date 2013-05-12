@@ -18,7 +18,7 @@ public class Server {
 				for (Map.Entry<AJAXConnection, Player> entry : players.entrySet()) {
 					Player player = entry.getValue();
 					player.update(dt);
-					for (AJAXConnection other : players.keySet()) other.sendState(player.name, player.x, player.y, player.vx, player.vy);
+					for (AJAXConnection other : players.keySet()) other.sendState(player);
 					entry.getKey().update();
 				}
 			}
@@ -32,11 +32,11 @@ public class Server {
 				Player player = new Player(name, 250, 250, 0, 0);
 				for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
 					Player otherPlayer = other.getValue();
-					connection.sendJoin(otherPlayer.name, otherPlayer.x, otherPlayer.y, otherPlayer.vx, otherPlayer.vy);
-					other.getKey().sendJoin(player.name, player.x, player.y, player.vx, player.vy);
+					connection.sendJoin(otherPlayer);
+					other.getKey().sendJoin(player);
 				}
 				players.put(connection, player);
-				connection.sendJoin(player.name, player.x, player.y, player.vx, player.vy);
+				connection.sendJoin(player);
 			}
 		}
 	}

@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <title>Game example</title>
 <style>
-#viewport { position: relative; }
-#ping { position: absolute; top: 0; right: 0; }
+#ping { position: absolute; top: 0; left: 0; }
 </style>
 </head>
 <body>
-<canvas id="viewport" width="500" height="500"><span id="ping"></span></canvas>
+<canvas id="viewport" width="500" height="500"></canvas>
+<span id="ping"></span>
 <br><input id="name" type="text"><input id="join" type="button" value="Join">
 <script>
 var self = null;
