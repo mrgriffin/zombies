@@ -124,14 +124,23 @@ public class AJAXServer {
 	}
 
 	private void handleStaticConnection(Socket connection, int id, String resource) {
+		String mimeType;
+		switch (resource) {
+		case "/": resource = "/index";
+		case "/index":
+			mimeType = "text/html";
+			break;
+		default:
+			handleNotFound(connection, resource);
+			return;
+		}
 		try {
-			// FIXME: Disallow resources that would read outside of wwwRoot (i.e. "..").
 			PrintStream ps = new PrintStream(connection.getOutputStream());
 			File resourceFile = new File(wwwRoot + resource);
 			if (resourceFile.canRead()) {
 				FileInputStream fin = new FileInputStream(resourceFile);
 				ps.print("HTTP/1.1 200 OK\r\n");
-				ps.print("Content-Type: text/html\r\n");
+				ps.print("Content-Type: " + mimeType + "\r\n");
 				if (id == -1) ps.print("Set-Cookie: id=" + nextConnectionID++ + "\r\n");
 				ps.print("\r\n");
 				while (fin.available() != 0) ps.write(fin.read());
@@ -140,12 +149,21 @@ public class AJAXServer {
 				connection.close();
 				fin.close();
 			} else {
-				ps.print("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nSorry that file does not exist.\r\n");
-				ps.flush();
-				connection.close();
+				handleNotFound(connection, resource);
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	private void handleNotFound(Socket connection, String resource) {
+		try {
+			PrintStream ps = new PrintStream(connection.getOutputStream());
+			ps.print("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nSorry " + resource + " was not found.\r\n");
+			ps.flush();
+		} catch (IOException e) {
+		} finally {
+			try { connection.close(); } catch (IOException e) {}
 		}
 	}
 
