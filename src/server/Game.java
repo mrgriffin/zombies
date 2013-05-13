@@ -46,11 +46,11 @@ public class Game {
 
 	private void generateEnemyWave() {
 		enemyWave++;
-		nextEnemyWave = System.currentTimeMillis() + (long)(5.0 / (2 + enemyWave) * 30000);
-		int enemyCount = (1 + enemyWave / 3) * 4;
+		nextEnemyWave = System.currentTimeMillis() + (long)(10.0 / (4 + enemyWave) * 30000);
+		int enemyCount = (1 + enemyWave / 2) * 3;
 		for (int i = 0; i < enemyCount; ++i) {
 			Contact c = findFreePoint(48);
-			addEnemy(new Player(null, c.x, c.y, 60, enemyWave * 5));
+			addEnemy(new Player(null, c.x, c.y, 50 + 2 * enemyWave, 25));
 		}
 	}
 
