@@ -77,6 +77,23 @@ class WallSPacket extends ServerPacket {
 	}
 }
 
+class EnemySPacket extends ServerPacket {
+	private int id;
+	private double x, y, vx, vy;
+
+	public EnemySPacket(int id, Player enemy) {
+		this.id = id;
+		this.x = enemy.x;
+		this.y = enemy.y;
+		this.vx = enemy.vx;
+		this.vy = enemy.vy;
+	}
+
+	public String toJavaScript() {
+		return toJSCall("handleEnemy", id, x, y, vx, vy);
+	}
+}
+
 class StateSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
@@ -169,6 +186,10 @@ public class AJAXConnection {
 
 	public void sendWall(Wall wall) {
 		sendQueue.add(new WallSPacket(wall));
+	}
+
+	public void sendEnemy(int id, Player enemy) {
+		sendQueue.add(new EnemySPacket(id, enemy));
 	}
 
 	void recvJoin(String name) {

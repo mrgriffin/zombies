@@ -1,5 +1,7 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 class Contact {
 	double x, y;
@@ -9,9 +11,17 @@ class Contact {
 public class Game {
 	private List<Wall> walls = new ArrayList<>();
 	private List<Player> players = new ArrayList<>();
+	private List<Player> enemies = new ArrayList<>();
+	private Map<Player, Integer> enemyIDs = new HashMap<>();
+	private int enemyID = 0;
 
 	public void addPlayer(Player player) {
 		players.add(player);
+	}
+
+	public void addEnemy(Player enemy) {
+		enemies.add(enemy);
+		enemyIDs.put(enemy, enemyID++);
 	}
 
 	public void addWall(Wall wall) {
@@ -20,6 +30,7 @@ public class Game {
 
 	public void update(double dt) {
 		for (Player player : players) player.update(dt);
+		for (Player enemy : enemies) { setAIInputs(enemy); enemy.update(dt); }
 
 		for (int i = 0; i < players.size(); ++i) {
 			Player pi = players.get(i);
@@ -47,8 +58,35 @@ public class Game {
 		}
 	}
 
-	public void send(AJAXConnection connection) {
+	public void sendInitial(AJAXConnection connection) {
 		for (Wall wall : walls) connection.sendWall(wall);
+		for (Player enemy : enemies) connection.sendEnemy(enemyIDs.get(enemy), enemy);
+	}
+
+	public void sendUpdate(AJAXConnection connection) {
+		for (Player enemy : enemies) connection.sendEnemy(enemyIDs.get(enemy), enemy);
+	}
+
+	private void setAIInputs(Player enemy) {
+		Player nearest = null;
+		double distance2 = Double.MAX_VALUE;
+		for (Player player : players) {
+			double dx = player.x - enemy.x;
+			double dy = player.y - enemy.y;
+			double d2 = (dx * dx) + (dy * dy);
+			if (d2 < distance2) {
+				nearest = player;
+				distance2 = d2;
+			}
+		}
+
+		if (nearest == null) return;
+
+		double dx = nearest.x - enemy.x;
+		double dy = nearest.y - enemy.y;
+		double d = Math.sqrt(dx * dx + dy * dy);
+
+		enemy.setInputs(dx / d, dy / d);
 	}
 
 	private static Contact circleCircleIntersection(double x0, double y0, double r0, double x1, double y1, double r1) {
