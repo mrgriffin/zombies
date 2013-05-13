@@ -52,10 +52,9 @@ public class Server {
 	}
 
 	// TODO: Have the server be authorative; accept key presses as updates.
-	void handleState(AJAXConnection connection, double vx, double vy) {
+	void handleState(AJAXConnection connection, double ix, double iy) {
 		if (!players.containsKey(connection)) return;
 		Player player = players.get(connection);
-		player.vx = vx;
-		player.vy = vy;
+		player.setInputs(Math.max(-1, Math.min(1, ix)), Math.max(-1, Math.min(1, iy)));
 	}
 }

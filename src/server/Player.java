@@ -16,4 +16,9 @@ public class Player {
 		x += vx * dt;
 		y += vy * dt;
 	}
+
+	public void setInputs(double x, double y) {
+		vx = x * 100;
+		vy = y * 100;
+	}
 }

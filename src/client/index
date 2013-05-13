@@ -31,10 +31,10 @@ function Wall(x, y, w, h) {
 window.addEventListener('keydown', function (e) {
 	if (!self) return;
 	switch (e.keyCode) {
-		case 38: self.vy = -100; break; // Up.
-		case 39: self.vx =  100; break; // Right.
-		case 40: self.vy =  100; break; // Down.
-		case 37: self.vx = -100; break; // Left.
+		case 38: self.iy = self.iu = -1; break; // Up.
+		case 39: self.ix = self.ir =  1; break; // Right.
+		case 40: self.iy = self.id =  1; break; // Down.
+		case 37: self.ix = self.il = -1; break; // Left.
 	}
 	// TODO: Only send an update if our state has changed.
 	sendState();
@@ -43,8 +43,10 @@ window.addEventListener('keydown', function (e) {
 window.addEventListener('keyup', function (e) {
 	if (!self) return;
 	switch (e.keyCode) {
-		case 38: case 40: self.vy = 0; break; // Up/Down.
-		case 39: case 37: self.vx = 0; break; // Right/Left.
+		case 38: self.iu = 0; self.iy = self.id; break; // Up.
+		case 39: self.ir = 0; self.ix = self.il; break; // Right.
+		case 40: self.id = 0; self.iy = self.iu; break; // Down.
+		case 37: self.il = 0; self.ix = self.ir; break; // Left.
 	}
 	// TODO: Only send an update if our state has changed.
 	sendState();
@@ -70,7 +72,7 @@ document.getElementById('name').addEventListener('keydown', function (e) { if (e
 function sendState() {
 	var request = new XMLHttpRequest();
 	request.open('POST', '/state', true);
-	request.send(self.vx + ',' + self.vy);
+	request.send(self.ix + ',' + self.iy);
 }
 
 /* Handle messages from the server. */
@@ -78,8 +80,10 @@ function sendState() {
 function handleJoin(name, x, y, vx, vy) {
 	players[name] = new Player(name, x, y, vx, vy);
 	// FIXME: This would allow someone with our name to override us.
-	if (name == document.getElementById('name').value)
+	if (name == document.getElementById('name').value) {
 		self = players[name];
+		self.ix = self.iy = self.iu = self.ir = self.id = self.il = 0;
+	}
 }
 
 function handleState(name, x, y, vx, vy) {
