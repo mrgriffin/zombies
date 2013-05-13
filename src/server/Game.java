@@ -22,11 +22,43 @@ public class Game {
 	private Map<Shot, Integer> shotIDs = new HashMap<>();
 	private int shotID = 0;
 
+	private int enemyWave;
+	private long nextEnemyWave;
+
+	public Game() {
+		enemyWave = 0;
+		nextEnemyWave = System.currentTimeMillis();
+	}
+
+	// TODO: Do not abuse contact as a Point2D.
+	private Contact findFreePoint(double r) {
+		while (true) {
+			// NOTE: 0..460 + 20 because the intersection testing doesn't seem to work.
+			double x = Math.random() * 460 + 20;
+			double y = Math.random() * 460 + 20;
+			for (Player p : players) if (circleCircleIntersection(p.x, p.y, 12, x, y, r) != null) continue;
+			for (Player e : enemies) if (circleCircleIntersection(e.x, e.y, 12, x, y, r) != null) continue;
+			for (Shot s : shots) if (circleCircleIntersection(s.x, s.y, 4, x, y, r) != null) continue;
+			for (Wall w : walls) if (circleRectangleIntersection(x, y, r, w.x, w.y, w.w, w.h) != null) continue;
+			return new Contact(x, y);
+		}
+	}
+
+	private void generateEnemyWave() {
+		enemyWave++;
+		nextEnemyWave = System.currentTimeMillis() + (long)(5.0 / (2 + enemyWave) * 30000);
+		int enemyCount = (1 + enemyWave / 3) * 4;
+		for (int i = 0; i < enemyCount; ++i) {
+			Contact c = findFreePoint(48);
+			addEnemy(new Player(null, c.x, c.y, 60, enemyWave * 5));
+		}
+	}
+
 	public void addPlayer(Player player) {
 		players.add(player);
 	}
 
-	public void addEnemy(Player enemy) {
+	private void addEnemy(Player enemy) {
 		enemies.add(enemy);
 		enemyIDs.put(enemy, enemyID++);
 	}
@@ -36,13 +68,17 @@ public class Game {
 	}
 
 	public void update(double dt) {
+		if (System.currentTimeMillis() >= nextEnemyWave) generateEnemyWave();
+
 		for (Player player : players) player.update(dt);
 		for (Player enemy : enemies) { setAIInputs(enemy); enemy.update(dt); }
 		for (Shot shot : shots) shot.update(dt);
 
+		// Player-{Player,Enemy,Wall} collisions.
 		for (int i = 0; i < players.size(); ++i) {
 			Player pi = players.get(i);
 
+			// TODO: Move this up to the update section.
 			if (pi.isRangedAttacking()) {
 				// TODO: Refactor this and isRangedAttacking into rangedAttack -> Shot.
 				double x = pi.x + pi.ox * (12 + 4);
@@ -87,6 +123,7 @@ public class Game {
 			}
 		}
 
+		// Shot-{Enemy,Wall} collisions.
 		for (int i = 0; i < shots.size(); ++i) {
 			Shot si = shots.get(i);
 
@@ -108,6 +145,38 @@ public class Game {
 					break;
 				}
 			}
+		}
+
+		// Enemy-{Enemy,Wall} collisions.
+		for (int i = 0; i < enemies.size(); ++i) {
+			Player ei = enemies.get(i);
+
+			for (int j = i + 1; j < enemies.size(); ++j) {
+				Player ej = enemies.get(j);
+				Contact c = circleCircleIntersection(ei.x, ei.y, 12, ej.x, ej.y, 12);
+				if (c != null) {
+					// TODO: Prevent pushing?
+					ei.x += c.x;
+					ei.y += c.y;
+					ej.x -= c.x;
+					ej.y -= c.y;
+				}
+			}
+
+			for (int j = 0; j < walls.size(); ++j) {
+				Wall wj = walls.get(j);
+				Contact c = circleRectangleIntersection(ei.x, ei.y, 12, wj.x, wj.y, wj.w, wj.h);
+				if (c != null) {
+					ei.x += c.x;
+					ei.y += c.y;
+				}
+			}
+		}
+
+		if (!enemies.isEmpty()) {
+			boolean aliveEnemy = false;
+			for (Player enemy : enemies) if (enemy.health > 0) aliveEnemy = true;
+			if (!aliveEnemy) nextEnemyWave = System.currentTimeMillis() + 500;
 		}
 	}
 

@@ -3,6 +3,7 @@ public class Player {
 	public String name;
 	public double x, y;   // Position.
 	public double vx, vy; // Velocity.
+	public double v;      // Max Speed.
 	public double ox, oy; // Orientation.
 	public int health;
 
@@ -11,12 +12,13 @@ public class Player {
 	private static int ATTACK_DAMAGE = 10;
 	private static int ATTACK_INTERVAL = 1000;
 
-	public Player(String name, double x, double y, double vx, double vy, int health) {
+	public Player(String name, double x, double y, double v, int health) {
 		this.name = name;
 		this.x = x;
 		this.y = y;
-		this.vx = vx;
-		this.vy = vy;
+		this.vx = 0;
+		this.vy = 0;
+		this.v = v;
 		this.ox = 1;
 		this.oy = 0;
 		this.health = health;
@@ -30,8 +32,8 @@ public class Player {
 	}
 
 	public void setInputs(double x, double y, boolean rangedAttack) {
-		this.vx = x * 100;
-		this.vy = y * 100;
+		this.vx = x * v;
+		this.vy = y * v;
 		if (x != 0 || y != 0) { this.ox = x; this.oy = y; }
 		this.rangedAttack = rangedAttack;
 	}

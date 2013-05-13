@@ -17,8 +17,6 @@ public class Server {
 		game.addWall(new Wall(12, 250, 24, 500));
 		game.addWall(new Wall(488, 250, 24, 500));
 
-		game.addEnemy(new Player(null, 50, 50, 0, 0, 25));
-
 		AJAXServer server = new AJAXServer(port, wwwRoot);
 		double dt = 1.0 / 60.0;
 		while (true) {
@@ -37,7 +35,7 @@ public class Server {
 
 	void handleJoin(AJAXConnection connection, String name) {
 		if (!players.containsKey(connection)) {
-			Player player = new Player(name, 250, 250, 0, 0, 100);
+			Player player = new Player(name, 250, 250, 100, 100);
 			connection.sendJoin(player);
 			game.sendInitial(connection);
 			for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
