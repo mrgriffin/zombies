@@ -133,6 +133,18 @@ class StateSPacket extends ServerPacket {
 	}
 }
 
+class EnemyDeathSPacket extends ServerPacket {
+	private int id;
+
+	public EnemyDeathSPacket(int id) {
+		this.id = id;
+	}
+
+	public String toJavaScript() {
+		return toJSCall("handleEnemyDeath", id);
+	}
+}
+
 class ShotDeathSPacket extends ServerPacket {
 	private int id;
 
@@ -226,6 +238,10 @@ public class AJAXConnection {
 
 	public void sendEnemy(int id, Player enemy) {
 		sendQueue.add(new EnemySPacket(id, enemy));
+	}
+
+	public void sendEnemyDeath(int id) {
+		sendQueue.add(new EnemyDeathSPacket(id));
 	}
 
 	public void sendShot(int id, Shot shot) {

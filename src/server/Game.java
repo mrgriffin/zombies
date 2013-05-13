@@ -93,14 +93,12 @@ public class Game {
 		for (int i = 0; i < shots.size(); ++i) {
 			Shot si = shots.get(i);
 
-			for (int j = enemies.size() - 1; j >= 0; --j) {
+			for (int j = 0; j < enemies.size(); ++j) {
 				Player ej = enemies.get(j);
 				Contact c = circleCircleIntersection(si.x, si.y, 4, ej.x, ej.y, 12);
 				if (c != null) {
 					si.dead = true;
 					ej.health -= 25;
-					// TODO: Report the death of an enemy.
-					//if (ej.health <= 0) enemies.remove(j);
 					break;
 				}
 			}
@@ -122,7 +120,15 @@ public class Game {
 	}
 
 	public void sendUpdate(AJAXConnection connection) {
-		for (Player enemy : enemies) connection.sendEnemy(enemyIDs.get(enemy), enemy);
+		for (int i = enemies.size() - 1; i >= 0; --i) {
+			Player enemy = enemies.get(i);
+			if (enemy.health > 0) {
+				connection.sendEnemy(enemyIDs.get(enemy), enemy);
+			} else {
+				connection.sendEnemyDeath(enemyIDs.get(enemy));
+				enemies.remove(i);
+			}
+		}
 
 		for (int i = shots.size() - 1; i >= 0; --i) {
 			Shot shot = shots.get(i);

@@ -116,6 +116,10 @@ function handleEnemy(id, x, y, vx, vy, health) {
 	else enemies[id].setState(x, y, vx, vy, health);
 }
 
+function handleEnemyDeath(id) {
+	delete enemies[id];
+}
+
 function handleShot(id, x, y, vx, vy) {
 	if (!shots[id]) shots[id] = new Shot(x, y, vx, vy);
 	else shots[id].setState(x, y, vx, vy);
