@@ -56,6 +56,7 @@ public class Game {
 					pi.y += c.y;
 					ej.x -= c.x;
 					ej.y -= c.y;
+					ej.attack(pi);
 				}
 			}
 

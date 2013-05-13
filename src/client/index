@@ -17,12 +17,12 @@ var players = {};
 var walls = [];
 var enemies = [];
 
-function Player(name, x, y, vx, vy) {
-	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+function Player(name, x, y, vx, vy, health) {
+	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health;
 }
 
-Player.prototype.setState = function (x, y, vx, vy) {
-	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+Player.prototype.setState = function (x, y, vx, vy, health) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health;
 };
 
 function Wall(x, y, w, h) {
@@ -78,8 +78,8 @@ function sendState() {
 
 /* Handle messages from the server. */
 
-function handleJoin(name, x, y, vx, vy) {
-	players[name] = new Player(name, x, y, vx, vy);
+function handleJoin(name, x, y, vx, vy, health) {
+	players[name] = new Player(name, x, y, vx, vy, health);
 	// FIXME: This would allow someone with our name to override us.
 	if (name == document.getElementById('name').value) {
 		self = players[name];
@@ -87,8 +87,8 @@ function handleJoin(name, x, y, vx, vy) {
 	}
 }
 
-function handleState(name, x, y, vx, vy) {
-	players[name].setState(x, y, vx, vy);
+function handleState(name, x, y, vx, vy, health) {
+	players[name].setState(x, y, vx, vy, health);
 }
 
 function handlePing(ping) {
@@ -99,9 +99,9 @@ function handleWall(x, y, w, h) {
 	walls.push(new Wall(x, y, w, h));
 }
 
-function handleEnemy(id, x, y, vx, vy) {
-	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy);
-	else enemies[id].setState(x, y, vx, vy);
+function handleEnemy(id, x, y, vx, vy, health) {
+	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy, health);
+	else enemies[id].setState(x, y, vx, vy, health);
 }
 
 function update(failures, maxFailures) {
@@ -137,7 +137,7 @@ function render() {
 		var p = players[player];
 		/*p.x += p.vx * dt;
 		p.y += p.vy * dt;*/
-		context.fillStyle = '#ff7f00';
+		context.fillStyle = 'rgb(' + Math.floor(255 / 100 * p.health) + ',' + Math.floor(127 / 100 * p.health) + ',0)';
 		context.beginPath();
 		context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
 		context.fill();

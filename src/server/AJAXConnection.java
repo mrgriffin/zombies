@@ -48,6 +48,7 @@ class MessageSPacket extends ServerPacket {
 class JoinSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
+	int health;
 
 	public JoinSPacket(Player player) {
 		this.name = player.name;
@@ -55,10 +56,11 @@ class JoinSPacket extends ServerPacket {
 		this.y = player.y;
 		this.vx = player.vx;
 		this.vy = player.vy;
+		this.health = player.health;
 	}
 
 	public String toJavaScript() {
-		return toJSCall("handleJoin", name, x, y, vx, vy);
+		return toJSCall("handleJoin", name, x, y, vx, vy, health);
 	}
 }
 
@@ -78,7 +80,7 @@ class WallSPacket extends ServerPacket {
 }
 
 class EnemySPacket extends ServerPacket {
-	private int id;
+	private int id, health;
 	private double x, y, vx, vy;
 
 	public EnemySPacket(int id, Player enemy) {
@@ -87,16 +89,18 @@ class EnemySPacket extends ServerPacket {
 		this.y = enemy.y;
 		this.vx = enemy.vx;
 		this.vy = enemy.vy;
+		this.health = enemy.health;
 	}
 
 	public String toJavaScript() {
-		return toJSCall("handleEnemy", id, x, y, vx, vy);
+		return toJSCall("handleEnemy", id, x, y, vx, vy, health);
 	}
 }
 
 class StateSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
+	private int health;
 
 	public StateSPacket(Player player) {
 		this.name = player.name;
@@ -104,10 +108,11 @@ class StateSPacket extends ServerPacket {
 		this.y = player.y;
 		this.vx = player.vx;
 		this.vy = player.vy;
+		this.health = player.health;
 	}
 
 	public String toJavaScript() {
-		return toJSCall("handleState", name, x, y, vx, vy);
+		return toJSCall("handleState", name, x, y, vx, vy, health);
 	}
 }
 
