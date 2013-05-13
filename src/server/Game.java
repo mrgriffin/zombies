@@ -39,11 +39,23 @@ public class Game {
 				Player pj = players.get(j);
 				Contact c = circleCircleIntersection(pi.x, pi.y, 12, pj.x, pj.y, 12);
 				if (c != null) {
+					// TODO: Prevent pushing?
 					pi.x += c.x;
 					pi.y += c.y;
 					pj.x -= c.x;
 					pj.y -= c.y;
-					// TODO: Remove the velocities?
+				}
+			}
+
+			for (int j = 0; j < enemies.size(); ++j) {
+				Player ej = enemies.get(j);
+				Contact c = circleCircleIntersection(pi.x, pi.y, 12, ej.x, ej.y, 12);
+				if (c != null) {
+					// TODO: Damage.
+					pi.x += c.x;
+					pi.y += c.y;
+					ej.x -= c.x;
+					ej.y -= c.y;
 				}
 			}
 
