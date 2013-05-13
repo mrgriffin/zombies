@@ -5,6 +5,7 @@ public class Player {
 	public double vx, vy;
 	public int health;
 
+	private boolean rangedAttack;
 	private long lastAttack;
 	private static int ATTACK_DAMAGE = 10;
 	private static int ATTACK_INTERVAL = 1000;
@@ -16,6 +17,7 @@ public class Player {
 		this.vx = vx;
 		this.vy = vy;
 		this.health = health;
+		this.rangedAttack = false;
 		this.lastAttack = System.currentTimeMillis();
 	}
 
@@ -24,15 +26,26 @@ public class Player {
 		y += vy * dt;
 	}
 
-	public void setInputs(double x, double y) {
-		vx = x * 100;
-		vy = y * 100;
+	public void setInputs(double x, double y, boolean rangedAttack) {
+		this.vx = x * 100;
+		this.vy = y * 100;
+		this.rangedAttack = rangedAttack;
 	}
 
-	public void attack(Player player) {
+	public void meleeAttack(Player player) {
 		if (lastAttack + ATTACK_INTERVAL < System.currentTimeMillis()) {
 			player.health -= ATTACK_DAMAGE;
 			lastAttack = System.currentTimeMillis();
+		}
+	}
+
+	// WARNING: Despite the name, this actually mutates the object!
+	public boolean isRangedAttacking() {
+		if (rangedAttack && lastAttack + ATTACK_INTERVAL < System.currentTimeMillis()) {
+			lastAttack = System.currentTimeMillis();
+			return true;
+		} else {
+			return false;
 		}
 	}
 }

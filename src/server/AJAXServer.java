@@ -96,13 +96,14 @@ public class AJAXServer {
 				if (!connections.containsKey(id)) return;
 				AJAXConnection ajaxConnection = connections.get(id);
 				String[] parts = content.split(",");
-				if (parts.length != 2) { connection.close(); return; }
-				double[] state = new double[parts.length];
-				for (int i = 0; i < parts.length; ++i) state[i] = Double.parseDouble(parts[i]);
+				if (parts.length != 3) { connection.close(); return; }
+				double[] state = new double[2];
+				for (int i = 0; i < 2; ++i) state[i] = Double.parseDouble(parts[i]);
+				boolean rangedAttack = Boolean.parseBoolean(parts[2]);
 				PrintStream ps = new PrintStream(connection.getOutputStream());
 				ps.print("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nack.\r\n");
 				connection.close();
-				ajaxConnection.recvState(state[0], state[1]);
+				ajaxConnection.recvState(state[0], state[1], rangedAttack);
 				break;
 			// TODO: Add a /connect resource that initializes the AJAXConnection.
 			} case "/update": {

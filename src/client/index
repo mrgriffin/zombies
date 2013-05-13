@@ -16,6 +16,7 @@ var self = null;
 var players = {};
 var walls = [];
 var enemies = [];
+var shots = [];
 
 function Player(name, x, y, vx, vy, health) {
 	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health;
@@ -29,6 +30,14 @@ function Wall(x, y, w, h) {
 	this.x = x; this.y = y; this.w = w; this.h = h;
 }
 
+function Shot(x, y, vx, vy) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+}
+
+Shot.prototype.setState = function (x, y, vx, vy) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+};
+
 window.addEventListener('keydown', function (e) {
 	if (!self) return;
 	switch (e.keyCode) {
@@ -36,6 +45,7 @@ window.addEventListener('keydown', function (e) {
 		case 39: self.ix = self.ir =  1; break; // Right.
 		case 40: self.iy = self.id =  1; break; // Down.
 		case 37: self.ix = self.il = -1; break; // Left.
+		case 32: self.ia = true;         break; // Space.
 	}
 	// TODO: Only send an update if our state has changed.
 	sendState();
@@ -48,6 +58,7 @@ window.addEventListener('keyup', function (e) {
 		case 39: self.ir = 0; self.ix = self.il; break; // Right.
 		case 40: self.id = 0; self.iy = self.iu; break; // Down.
 		case 37: self.il = 0; self.ix = self.ir; break; // Left.
+		case 32: self.ia = false;                break; // Space.
 	}
 	// TODO: Only send an update if our state has changed.
 	sendState();
@@ -73,7 +84,7 @@ document.getElementById('name').addEventListener('keydown', function (e) { if (e
 function sendState() {
 	var request = new XMLHttpRequest();
 	request.open('POST', '/state', true);
-	request.send(self.ix + ',' + self.iy);
+	request.send(self.ix + ',' + self.iy + ',' + self.ia);
 }
 
 /* Handle messages from the server. */
@@ -84,6 +95,7 @@ function handleJoin(name, x, y, vx, vy, health) {
 	if (name == document.getElementById('name').value) {
 		self = players[name];
 		self.ix = self.iy = self.iu = self.ir = self.id = self.il = 0;
+		self.ia = false;
 	}
 }
 
@@ -102,6 +114,15 @@ function handleWall(x, y, w, h) {
 function handleEnemy(id, x, y, vx, vy, health) {
 	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy, health);
 	else enemies[id].setState(x, y, vx, vy, health);
+}
+
+function handleShot(id, x, y, vx, vy) {
+	if (!shots[id]) shots[id] = new Shot(x, y, vx, vy);
+	else shots[id].setState(x, y, vx, vy);
+}
+
+function handleShotDeath(id) {
+	delete shots[id];
 }
 
 function update(failures, maxFailures) {
@@ -154,6 +175,13 @@ function render() {
 		context.fillStyle = '#3faf3f';
 		context.beginPath();
 		context.arc(enemy.x, enemy.y, 12, 0, 2 * Math.PI, false);
+		context.fill();
+	});
+
+	shots.forEach(function (shot) {
+		context.fillStyle = '#7f7fff';
+		context.beginPath();
+		context.arc(shot.x, shot.y, 4, 0, 2 * Math.PI, false);
 		context.fill();
 	});
 }

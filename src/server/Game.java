@@ -10,10 +10,17 @@ class Contact {
 
 public class Game {
 	private List<Wall> walls = new ArrayList<>();
+
 	private List<Player> players = new ArrayList<>();
+
+	// TODO: Use the index in the array as the ID and do not remove from the list.
 	private List<Player> enemies = new ArrayList<>();
 	private Map<Player, Integer> enemyIDs = new HashMap<>();
 	private int enemyID = 0;
+
+	private List<Shot> shots = new ArrayList<>();
+	private Map<Shot, Integer> shotIDs = new HashMap<>();
+	private int shotID = 0;
 
 	public void addPlayer(Player player) {
 		players.add(player);
@@ -31,9 +38,22 @@ public class Game {
 	public void update(double dt) {
 		for (Player player : players) player.update(dt);
 		for (Player enemy : enemies) { setAIInputs(enemy); enemy.update(dt); }
+		for (Shot shot : shots) shot.update(dt);
 
 		for (int i = 0; i < players.size(); ++i) {
 			Player pi = players.get(i);
+
+			if (pi.isRangedAttacking()) {
+				// TODO: Refactor this and isRangedAttacking into rangedAttack -> Shot.
+				double v = Math.sqrt(pi.vx * pi.vx + pi.vy * pi.vy);
+				double vx = v == 0 ? 1 : pi.vx / v;
+				double vy = v == 0 ? 0 : pi.vy / v;
+				double x = pi.x + vx * (12 + 4);
+				double y = pi.y + vy * (12 + 4);
+				Shot shot = new Shot(pi, x, y, vx * 150, vy * 150);
+				shots.add(shot);
+				shotIDs.put(shot, shotID++);
+			}
 
 			for (int j = i + 1; j < players.size(); ++j) {
 				Player pj = players.get(j);
@@ -56,7 +76,7 @@ public class Game {
 					pi.y += c.y;
 					ej.x -= c.x;
 					ej.y -= c.y;
-					ej.attack(pi);
+					ej.meleeAttack(pi);
 				}
 			}
 
@@ -69,6 +89,31 @@ public class Game {
 				}
 			}
 		}
+
+		for (int i = 0; i < shots.size(); ++i) {
+			Shot si = shots.get(i);
+
+			for (int j = enemies.size() - 1; j >= 0; --j) {
+				Player ej = enemies.get(j);
+				Contact c = circleCircleIntersection(si.x, si.y, 4, ej.x, ej.y, 12);
+				if (c != null) {
+					si.dead = true;
+					ej.health -= 25;
+					// TODO: Report the death of an enemy.
+					//if (ej.health <= 0) enemies.remove(j);
+					break;
+				}
+			}
+
+			for (int j = 0; j < walls.size(); ++j) {
+				Wall wj = walls.get(j);
+				Contact c = circleRectangleIntersection(si.x, si.y, 4, wj.x, wj.y, wj.w, wj.h);
+				if (c != null) {
+					si.dead = true;
+					break;
+				}
+			}
+		}
 	}
 
 	public void sendInitial(AJAXConnection connection) {
@@ -78,6 +123,16 @@ public class Game {
 
 	public void sendUpdate(AJAXConnection connection) {
 		for (Player enemy : enemies) connection.sendEnemy(enemyIDs.get(enemy), enemy);
+
+		for (int i = shots.size() - 1; i >= 0; --i) {
+			Shot shot = shots.get(i);
+			if (!shot.dead) {
+				connection.sendShot(shotIDs.get(shot), shot);
+			} else {
+				connection.sendShotDeath(shotIDs.get(shot));
+				shots.remove(i);
+			}
+		}
 	}
 
 	private void setAIInputs(Player enemy) {
@@ -99,7 +154,7 @@ public class Game {
 		double dy = nearest.y - enemy.y;
 		double d = Math.sqrt(dx * dx + dy * dy);
 
-		enemy.setInputs(dx / d, dy / d);
+		enemy.setInputs(dx / d, dy / d, false);
 	}
 
 	private static Contact circleCircleIntersection(double x0, double y0, double r0, double x1, double y1, double r1) {

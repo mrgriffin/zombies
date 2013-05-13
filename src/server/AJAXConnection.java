@@ -97,6 +97,23 @@ class EnemySPacket extends ServerPacket {
 	}
 }
 
+class ShotSPacket extends ServerPacket {
+	private int id;
+	private double x, y, vx, vy;
+
+	public ShotSPacket(int id, Shot shot) {
+		this.id = id;
+		this.x = shot.x;
+		this.y = shot.y;
+		this.vx = shot.vx;
+		this.vy = shot.vy;
+	}
+
+	public String toJavaScript() {
+		return toJSCall("handleShot", id, x, y, vx, vy);
+	}
+}
+
 class StateSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
@@ -113,6 +130,18 @@ class StateSPacket extends ServerPacket {
 
 	public String toJavaScript() {
 		return toJSCall("handleState", name, x, y, vx, vy, health);
+	}
+}
+
+class ShotDeathSPacket extends ServerPacket {
+	private int id;
+
+	public ShotDeathSPacket(int id) {
+		this.id = id;
+	}
+
+	public String toJavaScript() {
+		return toJSCall("handleShotDeath", id);
 	}
 }
 
@@ -146,14 +175,16 @@ class JoinCPacket extends ClientPacket {
 
 class StateCPacket extends ClientPacket {
 	private double vx, vy;
+	private boolean rangedAttack;
 
-	public StateCPacket(double vx, double vy) {
+	public StateCPacket(double vx, double vy, boolean rangedAttack) {
 		this.vx = vx;
 		this.vy = vy;
+		this.rangedAttack = rangedAttack;
 	}
 
 	public void accept(Server server, AJAXConnection connection) {
-		server.handleState(connection, vx, vy);
+		server.handleState(connection, vx, vy, rangedAttack);
 	}
 }
 
@@ -197,12 +228,20 @@ public class AJAXConnection {
 		sendQueue.add(new EnemySPacket(id, enemy));
 	}
 
+	public void sendShot(int id, Shot shot) {
+		sendQueue.add(new ShotSPacket(id, shot));
+	}
+
+	public void sendShotDeath(int id) {
+		sendQueue.add(new ShotDeathSPacket(id));
+	}
+
 	void recvJoin(String name) {
 		synchronized (recvQueue) { recvQueue.add(new JoinCPacket(name)); }
 	}
 
-	void recvState(double vx, double vy) {
-		synchronized (recvQueue) { recvQueue.add(new StateCPacket(vx, vy)); }
+	void recvState(double vx, double vy, boolean rangedAttack) {
+		synchronized (recvQueue) { recvQueue.add(new StateCPacket(vx, vy, rangedAttack)); }
 	}
 
 	public void update(Server server) {
