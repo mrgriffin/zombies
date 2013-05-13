@@ -9,33 +9,15 @@ public class Server {
 	}
 
 	private Map<AJAXConnection, Player> players = new HashMap<>();
+	private Game game = new Game();
 
 	public Server(int port, String wwwRoot) {
+		game.addWall(new Wall(250, 100, 144, 24));
+
 		AJAXServer server = new AJAXServer(port, wwwRoot);
 		double dt = 1.0 / 60.0;
 		while (true) {
-			List<Player> ps = new ArrayList<>(players.values());
-
-			for (Player p : ps) p.update(dt);
-
-			for (int i = 0; i < ps.size(); ++i) {
-				Player pi = ps.get(i);
-				for (int j = i + 1; j < ps.size(); ++j) {
-					Player pj = ps.get(j);
-					double dx = pi.x - pj.x;
-					double dy = pi.y - pj.y;
-					double d = Math.sqrt(dx * dx + dy * dy);
-					if (d < 24) {
-						double sx = (dx / d) * (24 - d);
-						double sy = (dy / d) * (24 - d);
-						pi.x += sx;
-						pi.y += sy;
-						pj.x -= sx;
-						pj.y -= sy;
-						// TODO: Remove the velocities?
-					}
-				}
-			}
+			game.update(dt);
 
 			for (Player player : players.values()) {
 				for (AJAXConnection connection : players.keySet()) connection.sendState(player);
@@ -50,12 +32,14 @@ public class Server {
 		if (!players.containsKey(connection)) {
 			Player player = new Player(name, 250, 250, 0, 0);
 			connection.sendJoin(player);
+			game.send(connection);
 			for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
 				Player otherPlayer = other.getValue();
 				connection.sendJoin(otherPlayer);
 				other.getKey().sendJoin(player);
 			}
 			players.put(connection, player);
+			game.addPlayer(player);
 		}
 	}
 

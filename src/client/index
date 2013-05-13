@@ -14,6 +14,7 @@
 <script>
 var self = null;
 var players = {};
+var walls = [];
 
 function Player(name, x, y, vx, vy) {
 	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -22,6 +23,10 @@ function Player(name, x, y, vx, vy) {
 Player.prototype.setState = function (x, y, vx, vy) {
 	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
 };
+
+function Wall(x, y, w, h) {
+	this.x = x; this.y = y; this.w = w; this.h = h;
+}
 
 window.addEventListener('keydown', function (e) {
 	if (!self) return;
@@ -85,6 +90,10 @@ function handlePing(ping) {
 	document.getElementById('ping').innerHTML = 'Ping: ' + ping;
 }
 
+function handleWall(x, y, w, h) {
+	walls.push(new Wall(x, y, w, h));
+}
+
 function update(failures, maxFailures) {
 	var request = new XMLHttpRequest();
 	request.onreadystatechange = function () {
@@ -120,9 +129,16 @@ function render() {
 		p.y += p.vy * dt;*/
 		context.fillStyle = '#ff7f00';
 		context.beginPath();
-		context.arc(p.x - 12, p.y - 12, 12, 0, 2 * Math.PI, false);
+		context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
 		context.fill();
 	}
+
+	walls.forEach(function (wall) {
+		context.fillStyle = '#000000';
+		context.beginPath();
+		context.rect(wall.x - wall.w / 2, wall.y - wall.h / 2, wall.w, wall.h);
+		context.fill();
+	});
 }
 
 setInterval(render, dt);

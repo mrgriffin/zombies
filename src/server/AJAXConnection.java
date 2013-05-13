@@ -62,6 +62,21 @@ class JoinSPacket extends ServerPacket {
 	}
 }
 
+class WallSPacket extends ServerPacket {
+	private double x, y, w, h;
+
+	public WallSPacket(Wall wall) {
+		this.x = wall.x;
+		this.y = wall.y;
+		this.w = wall.w;
+		this.h = wall.h;
+	}
+
+	public String toJavaScript() {
+		return toJSCall("handleWall", x, y, w, h);
+	}
+}
+
 class StateSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
@@ -150,6 +165,10 @@ public class AJAXConnection {
 
 	public void sendState(Player player) {
 		sendQueue.add(new StateSPacket(player));
+	}
+
+	public void sendWall(Wall wall) {
+		sendQueue.add(new WallSPacket(wall));
 	}
 
 	void recvJoin(String name) {
