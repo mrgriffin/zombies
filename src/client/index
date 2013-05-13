@@ -4,13 +4,81 @@
 <meta charset="UTF-8">
 <title>Game example</title>
 <style>
-#ping { position: absolute; top: 0; left: 550px; }
+#game {
+	position: relative;
+	width: 508px;
+	border: 2px solid #000000;
+	border-radius: 12px;
+	background-color: #000000;
+}
+
+#game #viewport {
+	display: block;
+	margin: 4px auto;
+	border-radius: 8px 8px 0 0;
+	background-color: #ffffff;
+}
+
+#game #players {
+	display: block;
+	width: 502px;
+	height: 60px;
+	margin: 6px auto 4px auto;
+	padding: 0;
+}
+
+#game #players li {
+	position: relative;
+	display: inline-block;
+	width: 94px;
+	height: 100%;
+
+	margin: 0 1px 0 1px;
+
+	color: #ffffff;
+	background-color: #1f1f1f;
+	font-family: sans-serif;
+}
+
+#game #players li:first-child { border-radius: 0 0 0 8px; }
+#game #players li:nth-child(3) { width: 96px; }
+#game #players li:nth-child(5) { border-radius: 0 0 8px 0; }
+
+#game #players li .name, #game #players li .health {
+	position: absolute;
+	width: 100%;
+	text-align: center;
+	font-size: 12pt;
+}
+
+#game #players li .name {
+	top: 2px;
+	font-weight: bold;
+}
+
+#game #players li .health {
+	bottom: 2px;
+}
+
+#game #players li.unused .name {
+	top: 20px;
+	font-size: 10pt;
+	color: #afafaf;
+}
 </style>
 </head>
 <body>
+<div id="game">
 <canvas id="viewport" width="500" height="500"></canvas>
-<span id="ping"></span>
-<br><input id="name" type="text"><input id="join" type="button" value="Join">
+<ul id="players">
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+</ul>
+</div>
+<input id="name" type="text"><input id="join" type="button" value="Join">
 <script>
 var self = null;
 var players = {};
@@ -91,6 +159,19 @@ function sendState() {
 
 function handleJoin(name, x, y, vx, vy, health) {
 	players[name] = new Player(name, x, y, vx, vy, health);
+
+	var ePlayers = document.getElementById('players');
+	for (var ePlayer in ePlayers.childNodes) {
+		ePlayer = ePlayers.childNodes[ePlayer];
+		if (ePlayer.className == 'unused') {
+			ePlayer.id = name;
+			ePlayer.className = '';
+			ePlayer.childNodes[0].innerHTML = name;
+			ePlayer.childNodes[1].innerHTML = health;
+			break;
+		}
+	}
+
 	// FIXME: This would allow someone with our name to override us.
 	if (name == document.getElementById('name').value) {
 		self = players[name];
@@ -101,10 +182,12 @@ function handleJoin(name, x, y, vx, vy, health) {
 
 function handleState(name, x, y, vx, vy, health) {
 	players[name].setState(x, y, vx, vy, health);
+
+	document.getElementById(name).childNodes[1].innerHTML = health;
 }
 
 function handlePing(ping) {
-	document.getElementById('ping').innerHTML = 'Ping: ' + ping;
+	/*document.getElementById('ping').innerHTML = 'Ping: ' + ping;*/
 }
 
 function handleWall(x, y, w, h) {
