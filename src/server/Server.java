@@ -12,7 +12,10 @@ public class Server {
 	private Game game = new Game();
 
 	public Server(int port, String wwwRoot) {
-		game.addWall(new Wall(250, 100, 144, 24));
+		game.addWall(new Wall(250, 12, 500, 24));
+		game.addWall(new Wall(250, 488, 500, 24));
+		game.addWall(new Wall(12, 250, 24, 500));
+		game.addWall(new Wall(488, 250, 24, 500));
 
 		AJAXServer server = new AJAXServer(port, wwwRoot);
 		double dt = 1.0 / 60.0;
