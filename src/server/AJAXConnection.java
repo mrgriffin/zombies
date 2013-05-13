@@ -2,7 +2,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 abstract class ServerPacket {
 	public abstract String toJavaScript();
@@ -200,6 +202,33 @@ class StateCPacket extends ClientPacket {
 	}
 }
 
+class PlayerStateDiff {
+	private double vx, vy;
+	private int health;
+	private long lastUpdate;
+	private static long MAX_UPDATE_INTERVAL = 100;
+
+	public PlayerStateDiff(double vx, double vy, int health) {
+		this.vx = vx;
+		this.vy = vy;
+		this.health = health;
+		this.lastUpdate = System.currentTimeMillis();
+	}
+
+	public boolean checkAndSet(double vx, double vy, int health) {
+		if (vx != this.vx || vy != this.vy || health != this.health ||
+		    lastUpdate + MAX_UPDATE_INTERVAL < System.currentTimeMillis()) {
+			this.vx = vx;
+			this.vy = vy;
+			this.health = health;
+			lastUpdate = System.currentTimeMillis();
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
 public class AJAXConnection {
 	private Socket socket;
 
@@ -213,6 +242,8 @@ public class AJAXConnection {
 
 	private List<ServerPacket> sendQueue = new ArrayList<>();
 	private List<ClientPacket> recvQueue = new ArrayList<>();
+
+	private Map<Player, PlayerStateDiff> playerEnemyDiffs = new HashMap<>();
 
 	public AJAXConnection(Socket socket, int id) {
 		this.socket = socket;
@@ -229,7 +260,12 @@ public class AJAXConnection {
 	}
 
 	public void sendState(Player player) {
-		sendQueue.add(new StateSPacket(player));
+		if (!playerEnemyDiffs.containsKey(player)) {
+			playerEnemyDiffs.put(player, new PlayerStateDiff(player.vx, player.vy, player.health));
+			sendQueue.add(new StateSPacket(player));
+		} else if (playerEnemyDiffs.get(player).checkAndSet(player.vx, player.vy, player.health) || player.pushed) {
+			sendQueue.add(new StateSPacket(player));
+		}
 	}
 
 	public void sendWall(Wall wall) {
@@ -237,7 +273,12 @@ public class AJAXConnection {
 	}
 
 	public void sendEnemy(int id, Player enemy) {
-		sendQueue.add(new EnemySPacket(id, enemy));
+		if (!playerEnemyDiffs.containsKey(enemy)) {
+			playerEnemyDiffs.put(enemy, new PlayerStateDiff(enemy.vx, enemy.vy, enemy.health));
+			sendQueue.add(new EnemySPacket(id, enemy));
+		} else if (playerEnemyDiffs.get(enemy).checkAndSet(enemy.vx, enemy.vy, enemy.health) || enemy.pushed) {
+			sendQueue.add(new EnemySPacket(id, enemy));
+		}
 	}
 
 	public void sendEnemyDeath(int id) {

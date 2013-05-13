@@ -12,6 +12,8 @@ public class Player {
 	private static int ATTACK_DAMAGE = 10;
 	private static int ATTACK_INTERVAL = 1000;
 
+	public boolean pushed;
+
 	public Player(String name, double x, double y, double v, int health) {
 		this.name = name;
 		this.x = x;
@@ -24,11 +26,13 @@ public class Player {
 		this.health = health;
 		this.rangedAttack = false;
 		this.lastAttack = System.currentTimeMillis();
+		this.pushed = false;
 	}
 
 	public void update(double dt) {
 		x += vx * dt;
 		y += vy * dt;
+		pushed = false;
 	}
 
 	public void setInputs(double x, double y, boolean rangedAttack) {

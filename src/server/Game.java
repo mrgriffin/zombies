@@ -97,6 +97,7 @@ public class Game {
 					pi.y += c.y;
 					pj.x -= c.x;
 					pj.y -= c.y;
+					pi.pushed = pj.pushed = true;
 				}
 			}
 
@@ -110,6 +111,7 @@ public class Game {
 					ej.x -= c.x;
 					ej.y -= c.y;
 					ej.meleeAttack(pi);
+					pi.pushed = ej.pushed = true;
 				}
 			}
 
@@ -160,6 +162,7 @@ public class Game {
 					ei.y += c.y;
 					ej.x -= c.x;
 					ej.y -= c.y;
+					ei.pushed = ej.pushed = true;
 				}
 			}
 

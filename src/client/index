@@ -151,8 +151,9 @@ update(0, 5);
 
 /* Render. */
 
-var dt = 1000 / 60;
+var dt = 1 / 60;
 
+// WARNING: Simulation is done here too.
 function render() {
 	var canvas = document.getElementById('viewport');
 	canvas.width = canvas.width;
@@ -160,8 +161,8 @@ function render() {
 	for (var player in players) {
 		if (!players.hasOwnProperty(player)) continue;
 		var p = players[player];
-		/*p.x += p.vx * dt;
-		p.y += p.vy * dt;*/
+		p.x += p.vx * dt;
+		p.y += p.vy * dt;
 		context.fillStyle = 'rgb(' + Math.floor(255 / 100 * p.health) + ',' + Math.floor(127 / 100 * p.health) + ',0)';
 		context.beginPath();
 		context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
@@ -176,6 +177,8 @@ function render() {
 	});
 
 	enemies.forEach(function (enemy) {
+		enemy.x += enemy.vx * dt;
+		enemy.y += enemy.vy * dt;
 		context.fillStyle = '#3faf3f';
 		context.beginPath();
 		context.arc(enemy.x, enemy.y, 12, 0, 2 * Math.PI, false);
@@ -190,7 +193,7 @@ function render() {
 	});
 }
 
-setInterval(render, dt);
+setInterval(render, dt * 1000);
 </script>
 </body>
 </html>
