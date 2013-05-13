@@ -121,6 +121,7 @@ public class Game {
 				if (c != null) {
 					pi.x += c.x;
 					pi.y += c.y;
+					pi.pushed = true;
 				}
 			}
 		}
