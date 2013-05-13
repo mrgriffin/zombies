@@ -183,7 +183,14 @@ function handleJoin(name, x, y, vx, vy, health) {
 function handleState(name, x, y, vx, vy, health) {
 	players[name].setState(x, y, vx, vy, health);
 
-	document.getElementById(name).childNodes[1].innerHTML = health;
+	var eHealth = document.getElementById(name).childNodes[1];
+
+	eHealth.innerHTML = health;
+	eHealth.style.color = '#' + (0xffffff * health / 100 + 0xff0000 * (1 - health / 100)).toString(16);
+
+	if (health < 33) {
+		eHealth.style.fontWeight = 'bold';
+	}
 }
 
 function handlePing(ping) {
