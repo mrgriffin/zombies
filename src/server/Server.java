@@ -9,16 +9,23 @@ public class Server {
 	}
 
 	private Map<AJAXConnection, Player> players = new HashMap<>();
+	private Game game = new Game();
 
 	public Server(int port, String wwwRoot) {
+		game.addWall(new Wall(250, 12, 500, 24));
+		game.addWall(new Wall(250, 488, 500, 24));
+		game.addWall(new Wall(12, 250, 24, 500));
+		game.addWall(new Wall(488, 250, 24, 500));
+
 		AJAXServer server = new AJAXServer(port, wwwRoot);
 		double dt = 1.0 / 60.0;
 		while (true) {
-			for (Map.Entry<AJAXConnection, Player> entry : players.entrySet()) {
-				Player player = entry.getValue();
-				player.update(dt);
-				for (AJAXConnection other : players.keySet()) other.sendState(player);
+			game.update(dt);
+
+			for (Player player : players.values()) {
+				for (AJAXConnection connection : players.keySet()) connection.sendState(player);
 			}
+
 			server.update(this);
 			try { Thread.sleep((int)(dt * 1000)); } catch (InterruptedException e) {}
 		}
@@ -27,13 +34,15 @@ public class Server {
 	void handleJoin(AJAXConnection connection, String name) {
 		if (!players.containsKey(connection)) {
 			Player player = new Player(name, 250, 250, 0, 0);
+			connection.sendJoin(player);
+			game.send(connection);
 			for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {
 				Player otherPlayer = other.getValue();
 				connection.sendJoin(otherPlayer);
 				other.getKey().sendJoin(player);
 			}
 			players.put(connection, player);
-			connection.sendJoin(player);
+			game.addPlayer(player);
 		}
 	}
 
