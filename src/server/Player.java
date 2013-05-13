@@ -1,8 +1,9 @@
 public class Player {
 	// TODO: Make the instance variables private.
 	public String name;
-	public double x, y;
-	public double vx, vy;
+	public double x, y;   // Position.
+	public double vx, vy; // Velocity.
+	public double ox, oy; // Orientation.
 	public int health;
 
 	private boolean rangedAttack;
@@ -16,6 +17,8 @@ public class Player {
 		this.y = y;
 		this.vx = vx;
 		this.vy = vy;
+		this.ox = 1;
+		this.oy = 0;
 		this.health = health;
 		this.rangedAttack = false;
 		this.lastAttack = System.currentTimeMillis();
@@ -29,6 +32,7 @@ public class Player {
 	public void setInputs(double x, double y, boolean rangedAttack) {
 		this.vx = x * 100;
 		this.vy = y * 100;
+		if (x != 0 || y != 0) { this.ox = x; this.oy = y; }
 		this.rangedAttack = rangedAttack;
 	}
 

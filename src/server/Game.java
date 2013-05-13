@@ -45,12 +45,9 @@ public class Game {
 
 			if (pi.isRangedAttacking()) {
 				// TODO: Refactor this and isRangedAttacking into rangedAttack -> Shot.
-				double v = Math.sqrt(pi.vx * pi.vx + pi.vy * pi.vy);
-				double vx = v == 0 ? 1 : pi.vx / v;
-				double vy = v == 0 ? 0 : pi.vy / v;
-				double x = pi.x + vx * (12 + 4);
-				double y = pi.y + vy * (12 + 4);
-				Shot shot = new Shot(pi, x, y, vx * 150, vy * 150);
+				double x = pi.x + pi.ox * (12 + 4);
+				double y = pi.y + pi.oy * (12 + 4);
+				Shot shot = new Shot(pi, x, y, pi.ox * 150, pi.oy * 150);
 				shots.add(shot);
 				shotIDs.put(shot, shotID++);
 			}

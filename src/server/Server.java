@@ -59,6 +59,8 @@ public class Server {
 	void handleState(AJAXConnection connection, double ix, double iy, boolean rangedAttack) {
 		if (!players.containsKey(connection)) return;
 		Player player = players.get(connection);
-		player.setInputs(Math.max(-1, Math.min(1, ix)), Math.max(-1, Math.min(1, iy)), rangedAttack);
+		double iv = Math.sqrt(ix * ix + iy * iy);
+		if (iv != 0) player.setInputs(Math.max(-1, Math.min(1, ix / iv)), Math.max(-1, Math.min(1, iy / iv)), rangedAttack);
+		else player.setInputs(0, 0, rangedAttack);
 	}
 }
