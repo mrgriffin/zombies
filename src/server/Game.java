@@ -228,6 +228,7 @@ public class Game {
 		Player nearest = null;
 		double distance2 = Double.MAX_VALUE;
 		for (Player player : players) {
+			if (player.health <= 0) continue;
 			double dx = player.x - enemy.x;
 			double dy = player.y - enemy.y;
 			double d2 = (dx * dx) + (dy * dy);
