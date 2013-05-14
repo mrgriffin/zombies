@@ -232,12 +232,12 @@ function handleWall(x, y, w, h) {
 }
 
 function handleEnemy(id, x, y, vx, vy, health, size) {
-	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy, health, size);
+	if (!enemies[id]) { enemies[id] = new Player(null, x, y, vx, vy, health, size); enemies[id].id = id; }
 	else enemies[id].setState(x, y, vx, vy, health);
 }
 
 function handleEnemyDeath(id) {
-	delete enemies[id];
+	enemies[id].dead = true;
 }
 
 function handleShot(id, x, y, vx, vy) {
@@ -293,7 +293,8 @@ var dt = 1 / 60;
 	renderer.setSize(WIDTH, HEIGHT);
 	document.getElementById('viewport').appendChild(renderer.domElement);
 
-	var material = new THREE.MeshLambertMaterial({ color: 0xcc0000 });
+	var playerMaterial = new THREE.MeshLambertMaterial({ color: 0xcc0000 });
+	var enemyMaterial = new THREE.MeshLambertMaterial({ color: 0x3faf3f });
 
 	/* Geometries. */
 	var headGeometry = new THREE.CubeGeometry(30, 30, 30);
@@ -372,12 +373,6 @@ var dt = 1 / 60;
 		return object;
 	}
 
-	/*var player = makeHumanoid(material);
-	player.position.z = -800;
-	player.rotation.x = 0.5 * Math.PI;
-
-	scene.add(player);*/
-
 	/* Light. */
 	var pointLight = new THREE.PointLight(0xffffff);
 	pointLight.position.x = 10;
@@ -385,11 +380,10 @@ var dt = 1 / 60;
 	pointLight.position.z = 130;
 	scene.add(pointLight);
 
-	var humanoids = {};
+	var playerObjects = {};
+	var enemyObjects = [];
 
 	function render() {
-		//player.walkAnim.update(1 / 60);
-
 		for (var player in players) {
 			if (!players.hasOwnProperty(player)) continue;
 			player = players[player];
@@ -399,14 +393,12 @@ var dt = 1 / 60;
 			player.y += player.vy * dt;
 
 			// Render.
-			var humanoid;
-			if (!humanoids[player]) {
-				humanoid = humanoids[player] = makeHumanoid(material);
+			var humanoid = playerObjects[player.name];
+			if (!humanoid) {
+				humanoid = playerObjects[player.name] = makeHumanoid(playerMaterial);
 				humanoid.position.z = -800;
 				humanoid.rotation.x = 0.5 * Math.PI;
 				scene.add(humanoid);
-			} else {
-				humanoid = humanoids[player];
 			}
 
 			humanoid.position.x = (player.x - 250) * 2;
@@ -421,6 +413,42 @@ var dt = 1 / 60;
 				humanoid.walkAnim.update(dt);
 			}
 		}
+
+		enemies.forEach(function (enemy) {
+			if (enemy.dead) {
+				scene.remove(enemyObjects[enemy.id]);
+				delete enemies[enemy.id];
+			}
+
+			// Simulate.
+			enemy.x += enemy.vx * dt;
+			enemy.y += enemy.vy * dt;
+
+			// Render.
+			// TODO: Refactor into renderHumanoid.
+			var humanoid = enemyObjects[enemy.id];
+			if (!humanoid) {
+				humanoid = enemyObjects[enemy.id] = makeHumanoid(enemyMaterial);
+				humanoid.position.z = -800;
+				humanoid.rotation.x = 0.5 * Math.PI;
+				humanoid.scale.x = enemy.size / 12;
+				humanoid.scale.y = enemy.size / 12;
+				humanoid.scale.z = enemy.size / 12;
+				scene.add(humanoid);
+			}
+
+			humanoid.position.x = (enemy.x - 250) * 2;
+			humanoid.position.y = -(enemy.y - 250) * 2;
+
+			if (enemy.vx || enemy.vy) {
+				if (enemy.vy == 0) humanoid.rotation.y = enemy.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
+				else humanoid.rotation.y = Math.atan2(enemy.vx, enemy.vy);
+				humanoid.walkAnim.update(dt);
+			} else {
+				humanoid.walkAnim.reset();
+				humanoid.walkAnim.update(dt);
+			}
+		});
 
 		//requestAnimationFrame(render);
 		renderer.render(scene, camera);
