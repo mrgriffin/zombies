@@ -291,6 +291,8 @@ var dt = 1 / 60;
 	camera.position.z = 300;
 	
 	renderer.setSize(WIDTH, HEIGHT);
+	renderer.shadowMapEnabled = true;
+	// renderer.shadowMapSoft = true;
 	document.getElementById('viewport').appendChild(renderer.domElement);
 
 	var playerMaterial = new THREE.MeshLambertMaterial({ color: 0xcc0000 });
@@ -370,15 +372,45 @@ var dt = 1 / 60;
 
 		object.walkAnim = new WalkAnim(head, leftArm, rightArm, leftLeg, rightLeg);
 
+		object.castShadow = true;
+		object.receiveShadow = true;
+
 		return object;
 	}
 
+	/* Floor plane. */
+	var geometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
+	var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x7f7f7f }));
+	mesh.position.z = -820;
+	mesh.receiveShadow = true;
+	scene.add(mesh);
+
 	/* Light. */
-	var pointLight = new THREE.PointLight(0xffffff);
-	pointLight.position.x = 10;
-	pointLight.position.y = 50;
-	pointLight.position.z = 130;
-	scene.add(pointLight);
+
+	function makeFlashlight() {
+		var flashlight = new THREE.SpotLight(0xffff66);
+		flashlight.castShadow = true;
+		flashlight.intensity = 2;
+		flashlight.shadowDarkness = 1;
+		flashlight.shadowCameraNear = 10;
+		flashlight.shadowCameraFar = 750;
+		flashlight.shadowCameraFov = 15;
+		scene.add(flashlight);
+		return flashlight;
+	}
+
+	// FIXME: We have to add the lights to the scene to keep it from crashing.
+	var flashlight = makeFlashlight();
+
+	function makeHighlight() {
+		var highlight = new THREE.SpotLight(0xffff66);
+		highlight.castShadow = true;
+		highlight.intensity = 0.5;
+		scene.add(highlight);
+		return highlight;
+	}
+
+	var highlight = makeHighlight();
 
 	var playerObjects = {};
 	var enemyObjects = [];
@@ -393,24 +425,42 @@ var dt = 1 / 60;
 			player.y += player.vy * dt;
 
 			// Render.
-			var humanoid = playerObjects[player.name];
-			if (!humanoid) {
-				humanoid = playerObjects[player.name] = makeHumanoid(playerMaterial);
-				humanoid.position.z = -800;
-				humanoid.rotation.x = 0.5 * Math.PI;
-				scene.add(humanoid);
+			var so = playerObjects[player.name]; // Scene objects.
+			if (!so) {
+				so = {
+					humanoid: makeHumanoid(playerMaterial),
+					flashlight: flashlight,
+					highlight: highlight
+				};
+
+				so.humanoid.position.z = -800;
+				so.humanoid.rotation.x = 0.5 * Math.PI;
+				scene.add(so.humanoid);
+
+				flashlight = makeFlashlight();
+				highlight = makeHighlight();
+
+				playerObjects[player.name] = so;
 			}
 
-			humanoid.position.x = (player.x - 250) * 2;
-			humanoid.position.y = -(player.y - 250) * 2;
+			so.humanoid.position.x = (player.x - 250) * 2;
+			so.humanoid.position.y = -(player.y - 250) * 2;
 
+			so.flashlight.position.set(so.humanoid.position.x, so.humanoid.position.y, -720);
+			if (player.vx || player.vy) { so.rx = player.vx; so.ry = player.vy; }
+			so.flashlight.target.position.set(so.humanoid.position.x + so.rx, so.humanoid.position.y + -so.ry, -820);
+
+			so.highlight.position.set(so.humanoid.position.x, so.humanoid.position.y, -670);
+			so.highlight.target.position.set(so.humanoid.position.x, so.humanoid.position.y, -820);
+
+			// Animate.
 			if (player.vx || player.vy) {
-				if (player.vy == 0) humanoid.rotation.y = player.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
-				else humanoid.rotation.y = Math.atan2(player.vx, player.vy);
-				humanoid.walkAnim.update(dt);
+				if (player.vy == 0) so.humanoid.rotation.y = player.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
+				else so.humanoid.rotation.y = Math.atan2(player.vx, player.vy);
+				so.humanoid.walkAnim.update(dt);
 			} else {
-				humanoid.walkAnim.reset();
-				humanoid.walkAnim.update(dt);
+				so.humanoid.walkAnim.reset();
+				so.humanoid.walkAnim.update(dt);
 			}
 		}
 
