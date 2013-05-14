@@ -241,7 +241,7 @@ function handleEnemyDeath(id) {
 }
 
 function handleShot(id, x, y, vx, vy) {
-	if (!shots[id]) shots[id] = new Shot(x, y, vx, vy);
+	if (!shots[id]) { shots[id] = new Shot(x, y, vx, vy); shots[id].id = id; }
 	else shots[id].setState(x, y, vx, vy);
 }
 
@@ -412,8 +412,26 @@ var dt = 1 / 60;
 
 	var highlight = makeHighlight();
 
+	function makeFlash() {
+		var flash = new THREE.SpotLight(0xffffff);
+		flash.castShadow = true;
+		flash.intensity = 0;
+		flash.shadowDarkness = 1;
+		flash.shadowCameraNear = 10;
+		flash.shadowCameraFar = 25;
+		flash.shadowCameraFov = 2;
+		scene.add(flash);
+		return flash;
+	}
+
+	var nextFlash = 0;
+	// FIXME: Firefox hangs if we call makeFlash more than once.
+	var flashes = [];
+	flashes.push(makeFlash());
+
 	var playerObjects = {};
 	var enemyObjects = [];
+	var shotObjects = [];
 
 	function render() {
 		for (var player in players) {
@@ -497,6 +515,23 @@ var dt = 1 / 60;
 			} else {
 				humanoid.walkAnim.reset();
 				humanoid.walkAnim.update(dt);
+			}
+		});
+
+		flashes.forEach(function (flash) {
+			if (flash.intensity > 0) {
+				flash.intensity -= 2;
+				flash.color.setHex((0xffffff * flash.intensity / 10) + (0xff4500 * (1 - flash.intensity / 10)));
+			}
+		});
+
+		shots.forEach(function (shot) {
+			var so = shotObjects[shot.id];
+			if (!so) {
+				so = shotObjects[shot.id] = flashes[nextFlash++ % flashes.length];
+				so.intensity = 10;
+				so.position.set((shot.x - 250) * 2, -(shot.y - 250) * 2, -800);
+				so.target.position.set(so.position.x + shot.vx, so.position.y + -shot.vy, -820);
 			}
 		});
 
