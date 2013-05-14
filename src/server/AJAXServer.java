@@ -136,6 +136,11 @@ public class AJAXServer {
 		case "/index":
 			mimeType = "text/html";
 			break;
+		case "/boss.ogg":
+		case "/build-up.ogg":
+		case "/hmatch.ogg":
+			mimeType = "audio/ogg";
+			break;
 		default:
 			handleNotFound(connection, resource);
 			return;

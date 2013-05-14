@@ -79,6 +79,9 @@
 </ul>
 </div>
 <input id="name" type="text"><input id="join" type="button" value="Join">
+<audio id="normal-loop" src="hmatch.ogg"></audio>
+<audio id="danger-intro" src="build-up.ogg"></audio>
+<audio id="danger-loop" src="boss.ogg"></audio>
 <script>
 var self = null;
 var players = {};
@@ -157,6 +160,9 @@ function sendState() {
 
 /* Handle messages from the server. */
 
+var eAudio;
+var audioTimeout;
+
 function handleJoin(name, x, y, vx, vy, health) {
 	players[name] = new Player(name, x, y, vx, vy, health);
 
@@ -177,6 +183,10 @@ function handleJoin(name, x, y, vx, vy, health) {
 		self = players[name];
 		self.ix = self.iy = self.iu = self.ir = self.id = self.il = 0;
 		self.ia = false;
+
+		eAudio = document.getElementById('normal-loop');
+		eAudio.play();
+		audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 32000);
 	}
 }
 
@@ -190,6 +200,18 @@ function handleState(name, x, y, vx, vy, health) {
 
 	if (health < 33) {
 		eHealth.style.fontWeight = 'bold';
+		if (eAudio.id == 'normal-loop') {
+			eAudio.pause();
+			clearInterval(audioTimeout);
+			eAudio = document.getElementById('danger-intro');
+			eAudio.play();
+			audioTimeout = setTimeout(function () {
+				eAudio.pause();
+				eAudio = document.getElementById('danger-loop');
+				eAudio.play();
+				audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 31900);
+			}, 32000);
+		}
 	}
 }
 
