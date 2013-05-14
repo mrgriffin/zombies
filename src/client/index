@@ -272,6 +272,8 @@ update(0, 5);
 
 function disconnected() {
 	clearInterval(renderInterval);
+	eAudio.pause();
+	try { clearInterval(audioTimeout); } catch (e) { clearTimeout(audioTimeout); }
 }
 
 /* Render. */
