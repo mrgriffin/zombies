@@ -90,6 +90,10 @@ var walls = [];
 var enemies = [];
 var shots = [];
 
+var renderInterval;
+var eAudio;
+var audioTimeout;
+
 function Player(name, x, y, vx, vy, health, size) {
 	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health; this.size = size;
 }
@@ -160,9 +164,6 @@ function sendState() {
 }
 
 /* Handle messages from the server. */
-
-var eAudio;
-var audioTimeout;
 
 function handleJoin(name, x, y, vx, vy, health, size) {
 	players[name] = new Player(name, x, y, vx, vy, health, size);
@@ -257,6 +258,7 @@ function update(failures, maxFailures) {
 			}
 
 			if (failures < maxFailures) update(failures, maxFailures);
+			else disconnected();
 		}
 	};
 	request.open('GET', '/update', true);
@@ -264,6 +266,10 @@ function update(failures, maxFailures) {
 }
 
 update(0, 5);
+
+function disconnected() {
+	clearInterval(renderInterval);
+}
 
 /* Render. */
 
@@ -309,7 +315,7 @@ function render() {
 	});
 }
 
-setInterval(render, dt * 1000);
+renderInterval = setInterval(render, dt * 1000);
 </script>
 </body>
 </html>
