@@ -271,7 +271,7 @@ function update(failures, maxFailures) {
 update(0, 5);
 
 function disconnected() {
-	/*clearInterval(renderInterval);*/
+	clearInterval(renderInterval);
 }
 
 /* Render. */
@@ -372,11 +372,11 @@ var dt = 1 / 60;
 		return object;
 	}
 
-	var player = makeHumanoid(material);
+	/*var player = makeHumanoid(material);
 	player.position.z = -800;
-	//player.rotation.x = 0.5 * Math.PI;
+	player.rotation.x = 0.5 * Math.PI;
 
-	scene.add(player);
+	scene.add(player);*/
 
 	/* Light. */
 	var pointLight = new THREE.PointLight(0xffffff);
@@ -385,14 +385,49 @@ var dt = 1 / 60;
 	pointLight.position.z = 130;
 	scene.add(pointLight);
 
-	(function render() {
-		player.walkAnim.update(1 / 60);
+	var humanoids = {};
 
-		player.rotation.y += 0.01;
+	function render() {
+		//player.walkAnim.update(1 / 60);
 
-		requestAnimationFrame(render);
+		for (var player in players) {
+			if (!players.hasOwnProperty(player)) continue;
+			player = players[player];
+
+			// Simulate.
+			player.x += player.vx * dt;
+			player.y += player.vy * dt;
+
+			// Render.
+			var humanoid;
+			if (!humanoids[player]) {
+				humanoid = humanoids[player] = makeHumanoid(material);
+				humanoid.position.z = -800;
+				humanoid.rotation.x = 0.5 * Math.PI;
+				scene.add(humanoid);
+			} else {
+				humanoid = humanoids[player];
+			}
+
+			humanoid.position.x = (player.x - 250) * 2;
+			humanoid.position.y = -(player.y - 250) * 2;
+
+			if (player.vx || player.vy) {
+				if (player.vy == 0) humanoid.rotation.y = player.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
+				else humanoid.rotation.y = Math.atan2(player.vx, player.vy);
+				humanoid.walkAnim.update(dt);
+			} else {
+				humanoid.walkAnim.reset();
+				humanoid.walkAnim.update(dt);
+			}
+		}
+
+		//requestAnimationFrame(render);
 		renderer.render(scene, camera);
-	}());
+	}
+
+	// TODO: Use requestAnimationFrame.
+	renderInterval = setInterval(render, dt * 1000);
 }());
 
 // WARNING: Simulation is done here too.
