@@ -141,6 +141,7 @@ public class AJAXServer {
 		case "/boss.ogg":
 		case "/build-up.ogg":
 		case "/hmatch.ogg":
+		case "/qdrums.ogg":
 			mimeType = "audio/ogg";
 			break;
 		case "/three.min.js":

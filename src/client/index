@@ -85,6 +85,7 @@
 <audio id="normal-loop" src="hmatch.ogg"></audio>
 <audio id="danger-intro" src="build-up.ogg"></audio>
 <audio id="danger-loop" src="boss.ogg"></audio>
+<audio id="dead-loop" src="qdrums.ogg"></audio>
 <script src="three.min.js"></script>
 <script>
 var self = null;
@@ -208,7 +209,11 @@ function handleState(name, x, y, vx, vy, health) {
 
 	if (health <= 0) {
 		eHealth.innerHTML = 'Deceased';
-		// TODO: Set some music.
+		try { clearInterval(audioTimeout); } catch (e) { clearTimeout(audioTimeout); }
+		eAudio.pause();
+		eAudio = document.getElementById('dead-loop');
+		eAudio.play();
+		audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 16000);
 	} else if (health < 33) {
 		eHealth.style.fontWeight = 'bold';
 		if (eAudio && eAudio.id == 'normal-loop') {
