@@ -35,7 +35,7 @@ public class Server {
 
 	void handleJoin(AJAXConnection connection, String name) {
 		if (!players.containsKey(connection)) {
-			Player player = new Player(name, 250, 250, 100, 100);
+			Player player = new Player(name, 250, 250, 100, 100, 12);
 			connection.sendJoin(player);
 			game.sendInitial(connection);
 			for (Map.Entry<AJAXConnection, Player> other : players.entrySet()) {

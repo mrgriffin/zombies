@@ -49,8 +49,19 @@ public class Game {
 		nextEnemyWave = System.currentTimeMillis() + (long)(10.0 / (4 + enemyWave) * 30000);
 		int enemyCount = (1 + enemyWave / 2) * 3;
 		for (int i = 0; i < enemyCount; ++i) {
-			Contact c = findFreePoint(48);
-			addEnemy(new Player(null, c.x, c.y, 50 + 2 * enemyWave, 25));
+			int type = (int)(Math.floor(Math.random() * 5)); // 0: Small, 1-3: Regular, 4: Large.
+			int size = 0, speed = 0, health = 0;
+			switch (type) {
+			case 0:
+				size = 6; speed = 65; health = 10; break;
+			case 1: case 2: case 3:
+				size = 12; speed = 50; health = 25; break;
+			case 4:
+				size = 24; speed = 35; health = 75; break;
+			}
+
+			Contact c = findFreePoint(24 + size);
+			addEnemy(new Player(null, c.x, c.y, speed + 2 * enemyWave, health, size));
 		}
 	}
 
@@ -81,8 +92,8 @@ public class Game {
 			// TODO: Move this up to the update section.
 			if (pi.isRangedAttacking()) {
 				// TODO: Refactor this and isRangedAttacking into rangedAttack -> Shot.
-				double x = pi.x + pi.ox * (12 + 4);
-				double y = pi.y + pi.oy * (12 + 4);
+				double x = pi.x + pi.ox * (pi.size + 4);
+				double y = pi.y + pi.oy * (pi.size + 4);
 				Shot shot = new Shot(pi, x, y, pi.ox * 150, pi.oy * 150);
 				shots.add(shot);
 				shotIDs.put(shot, shotID++);
@@ -90,7 +101,7 @@ public class Game {
 
 			for (int j = i + 1; j < players.size(); ++j) {
 				Player pj = players.get(j);
-				Contact c = circleCircleIntersection(pi.x, pi.y, 12, pj.x, pj.y, 12);
+				Contact c = circleCircleIntersection(pi.x, pi.y, pi.size, pj.x, pj.y, pj.size);
 				if (c != null) {
 					// TODO: Prevent pushing?
 					pi.x += c.x;
@@ -103,7 +114,7 @@ public class Game {
 
 			for (int j = 0; j < enemies.size(); ++j) {
 				Player ej = enemies.get(j);
-				Contact c = circleCircleIntersection(pi.x, pi.y, 12, ej.x, ej.y, 12);
+				Contact c = circleCircleIntersection(pi.x, pi.y, pi.size, ej.x, ej.y, ej.size);
 				if (c != null) {
 					// TODO: Damage.
 					pi.x += c.x;
@@ -117,7 +128,7 @@ public class Game {
 
 			for (int j = 0; j < walls.size(); ++j) {
 				Wall wj = walls.get(j);
-				Contact c = circleRectangleIntersection(pi.x, pi.y, 12, wj.x, wj.y, wj.w, wj.h);
+				Contact c = circleRectangleIntersection(pi.x, pi.y, pi.size, wj.x, wj.y, wj.w, wj.h);
 				if (c != null) {
 					pi.x += c.x;
 					pi.y += c.y;
@@ -132,7 +143,7 @@ public class Game {
 
 			for (int j = 0; j < enemies.size(); ++j) {
 				Player ej = enemies.get(j);
-				Contact c = circleCircleIntersection(si.x, si.y, 4, ej.x, ej.y, 12);
+				Contact c = circleCircleIntersection(si.x, si.y, 4, ej.x, ej.y, ej.size);
 				if (c != null) {
 					si.dead = true;
 					ej.health -= 25;
@@ -156,7 +167,7 @@ public class Game {
 
 			for (int j = i + 1; j < enemies.size(); ++j) {
 				Player ej = enemies.get(j);
-				Contact c = circleCircleIntersection(ei.x, ei.y, 12, ej.x, ej.y, 12);
+				Contact c = circleCircleIntersection(ei.x, ei.y, ei.size, ej.x, ej.y, ej.size);
 				if (c != null) {
 					// TODO: Prevent pushing?
 					ei.x += c.x;
@@ -169,7 +180,7 @@ public class Game {
 
 			for (int j = 0; j < walls.size(); ++j) {
 				Wall wj = walls.get(j);
-				Contact c = circleRectangleIntersection(ei.x, ei.y, 12, wj.x, wj.y, wj.w, wj.h);
+				Contact c = circleRectangleIntersection(ei.x, ei.y, ei.size, wj.x, wj.y, wj.w, wj.h);
 				if (c != null) {
 					ei.x += c.x;
 					ei.y += c.y;

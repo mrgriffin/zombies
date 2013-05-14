@@ -90,8 +90,8 @@ var walls = [];
 var enemies = [];
 var shots = [];
 
-function Player(name, x, y, vx, vy, health) {
-	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health;
+function Player(name, x, y, vx, vy, health, size) {
+	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health; this.size = size;
 }
 
 Player.prototype.setState = function (x, y, vx, vy, health) {
@@ -164,8 +164,8 @@ function sendState() {
 var eAudio;
 var audioTimeout;
 
-function handleJoin(name, x, y, vx, vy, health) {
-	players[name] = new Player(name, x, y, vx, vy, health);
+function handleJoin(name, x, y, vx, vy, health, size) {
+	players[name] = new Player(name, x, y, vx, vy, health, size);
 
 	var ePlayers = document.getElementById('players');
 	for (var ePlayer in ePlayers.childNodes) {
@@ -227,8 +227,8 @@ function handleWall(x, y, w, h) {
 	walls.push(new Wall(x, y, w, h));
 }
 
-function handleEnemy(id, x, y, vx, vy, health) {
-	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy, health);
+function handleEnemy(id, x, y, vx, vy, health, size) {
+	if (!enemies[id]) enemies[id] = new Player(null, x, y, vx, vy, health, size);
 	else enemies[id].setState(x, y, vx, vy, health);
 }
 
@@ -281,7 +281,7 @@ function render() {
 		p.y += p.vy * dt;
 		context.fillStyle = 'rgb(' + Math.floor(255 / 100 * p.health) + ',' + Math.floor(127 / 100 * p.health) + ',0)';
 		context.beginPath();
-		context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
+		context.arc(p.x, p.y, p.size, 0, 2 * Math.PI, false);
 		context.fill();
 	}
 
@@ -297,7 +297,7 @@ function render() {
 		enemy.y += enemy.vy * dt;
 		context.fillStyle = '#3faf3f';
 		context.beginPath();
-		context.arc(enemy.x, enemy.y, 12, 0, 2 * Math.PI, false);
+		context.arc(enemy.x, enemy.y, enemy.size, 0, 2 * Math.PI, false);
 		context.fill();
 	});
 

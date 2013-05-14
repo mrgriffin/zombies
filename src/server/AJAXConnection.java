@@ -50,7 +50,7 @@ class MessageSPacket extends ServerPacket {
 class JoinSPacket extends ServerPacket {
 	private String name;
 	private double x, y, vx, vy;
-	int health;
+	int health, size;
 
 	public JoinSPacket(Player player) {
 		this.name = player.name;
@@ -59,10 +59,11 @@ class JoinSPacket extends ServerPacket {
 		this.vx = player.vx;
 		this.vy = player.vy;
 		this.health = player.health;
+		this.size = player.size;
 	}
 
 	public String toJavaScript() {
-		return toJSCall("handleJoin", name, x, y, vx, vy, health);
+		return toJSCall("handleJoin", name, x, y, vx, vy, health, size);
 	}
 }
 
@@ -81,8 +82,9 @@ class WallSPacket extends ServerPacket {
 	}
 }
 
+// TODO: Separate enemy spawning from enemy state.
 class EnemySPacket extends ServerPacket {
-	private int id, health;
+	private int id, health, size;
 	private double x, y, vx, vy;
 
 	public EnemySPacket(int id, Player enemy) {
@@ -92,10 +94,11 @@ class EnemySPacket extends ServerPacket {
 		this.vx = enemy.vx;
 		this.vy = enemy.vy;
 		this.health = enemy.health;
+		this.size = enemy.size;
 	}
 
 	public String toJavaScript() {
-		return toJSCall("handleEnemy", id, x, y, vx, vy, health);
+		return toJSCall("handleEnemy", id, x, y, vx, vy, health, size);
 	}
 }
 

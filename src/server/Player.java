@@ -6,6 +6,7 @@ public class Player {
 	public double v;      // Max Speed.
 	public double ox, oy; // Orientation.
 	public int health;
+	public int size;      // Radius of bounding circle.
 
 	private boolean rangedAttack;
 	private long lastAttack;
@@ -14,7 +15,7 @@ public class Player {
 
 	public boolean pushed;
 
-	public Player(String name, double x, double y, double v, int health) {
+	public Player(String name, double x, double y, double v, int health, int size) {
 		this.name = name;
 		this.x = x;
 		this.y = y;
@@ -24,6 +25,7 @@ public class Player {
 		this.ox = 1;
 		this.oy = 0;
 		this.health = health;
+		this.size = size;
 		this.rangedAttack = false;
 		this.lastAttack = System.currentTimeMillis();
 		this.pushed = false;
