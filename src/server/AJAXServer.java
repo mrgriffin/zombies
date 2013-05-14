@@ -131,6 +131,7 @@ public class AJAXServer {
 
 	private void handleStaticConnection(Socket connection, int id, String resource) {
 		String mimeType;
+		String headers = "";
 		switch (resource) {
 		case "/": resource = "/index";
 		case "/index":
@@ -140,6 +141,10 @@ public class AJAXServer {
 		case "/build-up.ogg":
 		case "/hmatch.ogg":
 			mimeType = "audio/ogg";
+			break;
+		case "/three.min.js":
+			mimeType = "application/javascript";
+			headers = "Cache-Control: max-age=3600\r\n";
 			break;
 		default:
 			handleNotFound(connection, resource);
@@ -153,6 +158,7 @@ public class AJAXServer {
 				ps.print("HTTP/1.1 200 OK\r\n");
 				ps.print("Content-Type: " + mimeType + "\r\n");
 				if (id == -1) ps.print("Set-Cookie: id=" + nextConnectionID++ + "\r\n");
+				ps.print(headers);
 				ps.print("\r\n");
 				while (fin.available() != 0) ps.write(fin.read());
 				ps.print("\r\n");
