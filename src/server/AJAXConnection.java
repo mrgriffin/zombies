@@ -219,6 +219,7 @@ class PlayerStateDiff {
 	}
 
 	public boolean checkAndSet(double vx, double vy, int health) {
+		if (this.health == 0) return false;
 		if (vx != this.vx || vy != this.vy || health != this.health ||
 		    lastUpdate + MAX_UPDATE_INTERVAL < System.currentTimeMillis()) {
 			this.vx = vx;

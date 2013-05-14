@@ -89,6 +89,8 @@ public class Game {
 		for (int i = 0; i < players.size(); ++i) {
 			Player pi = players.get(i);
 
+			if (pi.health <= 0) continue;
+
 			// TODO: Move this up to the update section.
 			if (pi.isRangedAttacking()) {
 				// TODO: Refactor this and isRangedAttacking into rangedAttack -> Shot.
@@ -101,6 +103,7 @@ public class Game {
 
 			for (int j = i + 1; j < players.size(); ++j) {
 				Player pj = players.get(j);
+				if (pj.health <= 0) continue;
 				Contact c = circleCircleIntersection(pi.x, pi.y, pi.size, pj.x, pj.y, pj.size);
 				if (c != null) {
 					// TODO: Prevent pushing?
@@ -116,7 +119,6 @@ public class Game {
 				Player ej = enemies.get(j);
 				Contact c = circleCircleIntersection(pi.x, pi.y, pi.size, ej.x, ej.y, ej.size);
 				if (c != null) {
-					// TODO: Damage.
 					pi.x += c.x;
 					pi.y += c.y;
 					ej.x -= c.x;

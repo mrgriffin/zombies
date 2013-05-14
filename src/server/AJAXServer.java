@@ -136,6 +136,7 @@ public class AJAXServer {
 		case "/": resource = "/index";
 		case "/index":
 			mimeType = "text/html";
+			headers = "Set-Cookie: id=" + nextConnectionID++ + "\r\n";
 			break;
 		case "/boss.ogg":
 		case "/build-up.ogg":
@@ -157,7 +158,6 @@ public class AJAXServer {
 				FileInputStream fin = new FileInputStream(resourceFile);
 				ps.print("HTTP/1.1 200 OK\r\n");
 				ps.print("Content-Type: " + mimeType + "\r\n");
-				if (id == -1) ps.print("Set-Cookie: id=" + nextConnectionID++ + "\r\n");
 				ps.print(headers);
 				ps.print("\r\n");
 				while (fin.available() != 0) ps.write(fin.read());

@@ -206,9 +206,12 @@ function handleState(name, x, y, vx, vy, health) {
 	// FIXME: If r is 0 this will be #ff00 which is not a color.
 	if (health >= 0) eHealth.style.color = '#' + (r << 16 | g << 8).toString(16);
 
-	if (health < 33) {
+	if (health <= 0) {
+		eHealth.innerHTML = 'Deceased';
+		// TODO: Set some music.
+	} else if (health < 33) {
 		eHealth.style.fontWeight = 'bold';
-		if (eAudio.id == 'normal-loop') {
+		if (eAudio && eAudio.id == 'normal-loop') {
 			eAudio.pause();
 			clearInterval(audioTimeout);
 			eAudio = document.getElementById('danger-intro');
@@ -440,6 +443,13 @@ var dt = 1 / 60;
 			if (!players.hasOwnProperty(player)) continue;
 			player = players[player];
 
+			if (player.health <= 0) {
+				scene.remove(playerObjects[player.name].humanoid);
+				scene.remove(playerObjects[player.name].flashlight);
+				scene.remove(playerObjects[player.name].highlight);
+				delete players[player.name];
+			}
+
 			// Simulate.
 			player.x += player.vx * dt;
 			player.y += player.vy * dt;
@@ -488,6 +498,7 @@ var dt = 1 / 60;
 			if (enemy.dead) {
 				scene.remove(enemyObjects[enemy.id]);
 				delete enemies[enemy.id];
+				return;
 			}
 
 			// Simulate.
