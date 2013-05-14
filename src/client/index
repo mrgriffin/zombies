@@ -52,12 +52,13 @@
 }
 
 #game #players li .name {
-	top: 2px;
+	top: 8px;
 	font-weight: bold;
 }
 
 #game #players li .health {
-	bottom: 2px;
+	bottom: 8px;
+	color: #00ff00;
 }
 
 #game #players li.unused .name {
@@ -196,7 +197,10 @@ function handleState(name, x, y, vx, vy, health) {
 	var eHealth = document.getElementById(name).childNodes[1];
 
 	eHealth.innerHTML = health;
-	eHealth.style.color = '#' + (0xffffff * health / 100 + 0xff0000 * (1 - health / 100)).toString(16);
+	var r = Math.max(0, Math.min(0xff, 0xff * (1 - health / 100)));
+	var g = Math.max(0, Math.min(0xff, 0xff * (health / 100)));
+	// FIXME: If r is 0 this will be #ff00 which is not a color.
+	if (health >= 0) eHealth.style.color = '#' + (r << 16 | g << 8).toString(16);
 
 	if (health < 33) {
 		eHealth.style.fontWeight = 'bold';
