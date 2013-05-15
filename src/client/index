@@ -444,6 +444,8 @@ var dt = 1 / 60;
 	var shotObjects = [];
 
 	function render() {
+		if (self && self.name.substring(0, 5) == '[Bot]') doAI();
+
 		for (var player in players) {
 			if (!players.hasOwnProperty(player)) continue;
 			player = players[player];
@@ -560,6 +562,83 @@ var dt = 1 / 60;
 	// TODO: Use requestAnimationFrame.
 	renderInterval = setInterval(render, dt * 1000);
 }());
+
+/* AI. */
+
+var targetEnemy;
+var enemyAngle;
+var enemyDistance;
+var nextFire = 0; // Number of frames until we can next fire.
+var ox = 0, oy = 0;   // Orientation.
+
+function angleTo(from, to) {
+	if (from.y == to.y) return from.x > to.x ? 0 : Math.PI;
+	else return Math.atan2(to.y - from.y, to.x - from.x);
+}
+
+function doAI() {
+	var approachSpeed = 0.1;
+	var retreatSpeed = 1;
+
+	if (self.health <= 0) return;
+	nextFire--;
+
+	if (self.vx || self.vy) { ox = self.vx; oy = self.vy; }
+
+	if (!targetEnemy) {
+		var d2;
+		enemies.forEach(function (enemy) {
+			var dx = self.x - enemy.x;
+			var dy = self.y - enemy.y;
+			var d = dx * dx + dy * dy;
+			if (!d2 || d < d2) {
+				d2 = d;
+				targetEnemy = enemy;
+			}
+		});
+
+		if (targetEnemy) {
+			// Ignore enemies that we can not see.
+			// TODO: How big is the flashlight's field of view?
+			// TODO: How big is the highlight's field of view?
+			enemyAngle = angleTo(self, targetEnemy);
+			var aimAngle = angleTo(self, { x: self.x + ox, y: self.y + oy });
+			enemyDistance = Math.sqrt(d2);
+			if (Math.abs(enemyAngle - aimAngle) < Math.PI / 6) {
+				if (enemyDistance > 150) targetEnemy = undefined;
+			} else {
+				if (enemyDistance > 50) targetEnemy = undefined;
+			}
+		}
+	}
+
+	if (targetEnemy) {
+		// TODO: Rotate towards the enemy.
+		/*var rot = 0;
+		if (enemyAngle > 0) rot = Math.min(enemyAngle, 0.01);
+		if (enemyAngle < 0) rot = Math.max(enemyAngle, -0.01);*/
+
+		// If we can shoot and we are reasonably far from the enemy we should approach it.
+		if (nextFire <= 0 && enemyDistance > 20) {
+			self.ix = (targetEnemy.x - self.x) / enemyDistance * approachSpeed;
+			self.iy = (targetEnemy.y - self.y) / enemyDistance * approachSpeed;
+			self.ia = true;
+			nextFire = 70; // NOTE: Technically this is 60, but we want to account for possible lag.
+		// Otherwise we should retreat.
+		// TODO: Not run ourselves into corners.
+		// NOTE: We don't change direction for a while after firing.
+		} else if (nextFire < 40) {
+			self.ix = (self.x - targetEnemy.x) / enemyDistance * retreatSpeed;
+			self.iy = (self.y - targetEnemy.y) / enemyDistance * retreatSpeed;
+			self.ia = false;
+		}
+
+		sendState();
+
+		// TODO: Only undefine targetEnemy if we have killed him?
+		targetEnemy = undefined;
+	}
+}
 
 // WARNING: Simulation is done here too.
 /*function render() {
