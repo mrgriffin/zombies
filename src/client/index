@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Game example</title>
+<style>
+#game {
+	position: relative;
+	width: 508px;
+	border: 2px solid #000000;
+	border-radius: 12px;
+	background-color: #000000;
+}
+
+#game #viewport {
+	display: block;
+	width: 500px;
+	height: 500px;
+	margin: 4px auto;
+	border-radius: 8px 8px 0 0;
+	background-color: #ffffff;
+}
+
+#game #players {
+	display: block;
+	width: 502px;
+	height: 60px;
+	margin: 6px auto 4px auto;
+	padding: 0;
+}
+
+#game #players li {
+	position: relative;
+	display: inline-block;
+	width: 94px;
+	height: 100%;
+
+	margin: 0 1px 0 1px;
+
+	color: #ffffff;
+	background-color: #1f1f1f;
+	font-family: sans-serif;
+}
+
+#game #players li:first-child { border-radius: 0 0 0 8px; }
+#game #players li:nth-child(3) { width: 96px; }
+#game #players li:nth-child(5) { border-radius: 0 0 8px 0; }
+
+#game #players li .name, #game #players li .health {
+	position: absolute;
+	width: 100%;
+	text-align: center;
+	font-size: 12pt;
+}
+
+#game #players li .name {
+	top: 8px;
+	font-weight: bold;
+}
+
+#game #players li .health {
+	bottom: 8px;
+	color: #00ff00;
+}
+
+#game #players li.unused .name {
+	top: 20px;
+	font-size: 10pt;
+	color: #afafaf;
+}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="viewport"></div>
+<ul id="players">
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+<li class="unused"><span class="name">Waiting...</span><span class="health"></span></li>
+</ul>
+</div>
+<input id="name" type="text"><input id="join" type="button" value="Join">
+<audio id="normal-loop" src="hmatch.ogg"></audio>
+<audio id="danger-intro" src="build-up.ogg"></audio>
+<audio id="danger-loop" src="boss.ogg"></audio>
+<audio id="dead-loop" src="qdrums.ogg"></audio>
+<script src="three.min.js"></script>
+<script>
+var self = null;
+var players = {};
+var walls = [];
+var enemies = [];
+var shots = [];
+
+var renderInterval;
+var eAudio;
+var audioTimeout;
+
+function Player(name, x, y, vx, vy, health, size) {
+	this.name = name; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health; this.size = size;
+}
+
+Player.prototype.setState = function (x, y, vx, vy, health) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.health = health;
+};
+
+function Wall(x, y, w, h) {
+	this.x = x; this.y = y; this.w = w; this.h = h;
+}
+
+function Shot(x, y, vx, vy) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+}
+
+Shot.prototype.setState = function (x, y, vx, vy) {
+	this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+};
+
+window.addEventListener('keydown', function (e) {
+	if (!self) return;
+	switch (e.keyCode) {
+		case 38: self.iy = self.iu = -1; break; // Up.
+		case 39: self.ix = self.ir =  1; break; // Right.
+		case 40: self.iy = self.id =  1; break; // Down.
+		case 37: self.ix = self.il = -1; break; // Left.
+		case 32: self.ia = true;         break; // Space.
+	}
+	// TODO: Only send an update if our state has changed.
+	sendState();
+}, false);
+
+window.addEventListener('keyup', function (e) {
+	if (!self) return;
+	switch (e.keyCode) {
+		case 38: self.iu = 0; self.iy = self.id; break; // Up.
+		case 39: self.ir = 0; self.ix = self.il; break; // Right.
+		case 40: self.id = 0; self.iy = self.iu; break; // Down.
+		case 37: self.il = 0; self.ix = self.ir; break; // Left.
+		case 32: self.ia = false;                break; // Space.
+	}
+	// TODO: Only send an update if our state has changed.
+	sendState();
+}, false);
+
+/* Send messages to the server. */
+
+function joinRoom() {
+	var request = new XMLHttpRequest();
+	request.onreadystatechange = function () {
+		if (request.readyState == 4 && request.status == 200) {
+			document.getElementById('name').disabled = true;
+			document.getElementById('join').disabled = true;
+		}
+	};
+	request.open('POST', '/join', true);
+	request.send(document.getElementById('name').value);
+}
+
+document.getElementById('join').addEventListener('click', joinRoom, false);
+document.getElementById('name').addEventListener('keydown', function (e) { if (e.keyCode == 13) joinRoom(); }, false);
+
+function sendState() {
+	var request = new XMLHttpRequest();
+	request.open('POST', '/state', true);
+	request.send(self.ix + ',' + self.iy + ',' + self.ia);
+}
+
+/* Handle messages from the server. */
+
+function handleJoin(name, x, y, vx, vy, health, size) {
+	players[name] = new Player(name, x, y, vx, vy, health, size);
+
+	var ePlayers = document.getElementById('players');
+	for (var ePlayer in ePlayers.childNodes) {
+		ePlayer = ePlayers.childNodes[ePlayer];
+		if (ePlayer.className == 'unused') {
+			ePlayer.id = name;
+			ePlayer.className = '';
+			ePlayer.childNodes[0].innerHTML = name;
+			ePlayer.childNodes[1].innerHTML = health;
+			break;
+		}
+	}
+
+	// FIXME: This would allow someone with our name to override us.
+	if (name == document.getElementById('name').value) {
+		self = players[name];
+		self.ix = self.iy = self.iu = self.ir = self.id = self.il = 0;
+		self.ia = false;
+
+		eAudio = document.getElementById('normal-loop');
+		eAudio.play();
+		audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 32000);
+	}
+}
+
+function handleState(name, x, y, vx, vy, health) {
+	players[name].setState(x, y, vx, vy, health);
+
+	var eHealth = document.getElementById(name).childNodes[1];
+
+	eHealth.innerHTML = health;
+	var r = Math.max(0, Math.min(0xff, 0xff * (1 - health / 100)));
+	var g = Math.max(0, Math.min(0xff, 0xff * (health / 100)));
+	// FIXME: If r is 0 this will be #ff00 which is not a color.
+	if (health >= 0) eHealth.style.color = '#' + (r << 16 | g << 8).toString(16);
+
+	if (health <= 0) {
+		eHealth.innerHTML = 'Deceased';
+		try { clearInterval(audioTimeout); } catch (e) { clearTimeout(audioTimeout); }
+		eAudio.pause();
+		eAudio = document.getElementById('dead-loop');
+		eAudio.play();
+		audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 16000);
+	} else if (health < 33) {
+		eHealth.style.fontWeight = 'bold';
+		if (eAudio && eAudio.id == 'normal-loop') {
+			eAudio.pause();
+			clearInterval(audioTimeout);
+			eAudio = document.getElementById('danger-intro');
+			eAudio.play();
+			audioTimeout = setTimeout(function () {
+				eAudio.pause();
+				eAudio = document.getElementById('danger-loop');
+				eAudio.play();
+				audioTimeout = setInterval(function () { eAudio.currentTime = 0; eAudio.play(); }, 31900);
+			}, 32000);
+		}
+	}
+}
+
+function handlePing(ping) {
+	/*document.getElementById('ping').innerHTML = 'Ping: ' + ping;*/
+}
+
+function handleWall(x, y, w, h) {
+	walls.push(new Wall(x, y, w, h));
+}
+
+function handleEnemy(id, x, y, vx, vy, health, size) {
+	if (!enemies[id]) { enemies[id] = new Player(null, x, y, vx, vy, health, size); enemies[id].id = id; }
+	else enemies[id].setState(x, y, vx, vy, health);
+}
+
+function handleEnemyDeath(id) {
+	enemies[id].dead = true;
+}
+
+function handleShot(id, x, y, vx, vy) {
+	if (!shots[id]) { shots[id] = new Shot(x, y, vx, vy); shots[id].id = id; }
+	else shots[id].setState(x, y, vx, vy);
+}
+
+function handleShotDeath(id) {
+	delete shots[id];
+}
+
+function update(failures, maxFailures) {
+	var request = new XMLHttpRequest();
+	request.onreadystatechange = function () {
+		// FIXME: Occasionally we lose the first response.
+		if (request.readyState == 4) {
+			if (request.status == 200) {
+				eval(request.responseText);
+			} else {
+				failures++;
+			}
+
+			if (failures < maxFailures) update(failures, maxFailures);
+			else disconnected();
+		}
+	};
+	request.open('GET', '/update', true);
+	request.send(null);
+}
+
+update(0, 5);
+
+function disconnected() {
+	clearInterval(renderInterval);
+	eAudio.pause();
+	try { clearInterval(audioTimeout); } catch (e) { clearTimeout(audioTimeout); }
+}
+
+/* Render. */
+
+var dt = 1 / 60;
+
+// Initialize the renderer.
+(function () {
+	var WIDTH = 500, HEIGHT = 500;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 0.1, FAR = 10000;
+	var renderer = new THREE.WebGLRenderer();
+	
+	var camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+	var scene = new THREE.Scene();
+	
+	scene.add(camera);
+	camera.position.z = 300;
+	
+	renderer.setSize(WIDTH, HEIGHT);
+	renderer.shadowMapEnabled = true;
+	// renderer.shadowMapSoft = true;
+	document.getElementById('viewport').appendChild(renderer.domElement);
+
+	var playerMaterial = new THREE.MeshLambertMaterial({ color: 0xcc0000 });
+	var enemyMaterial = new THREE.MeshLambertMaterial({ color: 0x3faf3f });
+
+	/* Geometries. */
+	var headGeometry = new THREE.CubeGeometry(30, 30, 30);
+	// TODO: We should probably not be translating by this much in the y axis.
+	headGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 50, 7.5));
+
+	var shoulderGeometry = new THREE.CubeGeometry(60, 15, 30);
+
+	var torsoGeometry = new THREE.CubeGeometry(30, 75, 30);
+
+	var armGeometry = new THREE.CubeGeometry(10, 60, 30);
+	armGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -30, 7.5));
+
+	var legGeometry = new THREE.CubeGeometry(12, 75, 30);
+	legGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -37.5, 7.5));
+
+	/* Animations. */
+	function WalkAnim(head, leftArm, rightArm, leftLeg, rightLeg) {
+		this.head = head; this.leftArm = leftArm; this.rightArm = rightArm; this.leftLeg = leftLeg; this.rightLeg = rightLeg;
+		this.stride = 0;
+	}
+
+	WalkAnim.prototype.reset = function () {
+		this.stride = 0;
+	};
+
+	WalkAnim.prototype.update = function (dt) {
+		this.head.rotation.x = Math.abs(0.5 - this.stride % 1) / 4;
+		this.leftLeg.rotation.x = this.rightArm.rotation.x = Math.abs(0.5 - this.stride % 1) - 0.25;
+		this.rightLeg.rotation.x = this.leftArm.rotation.x = -Math.abs(0.5 - this.stride % 1) + 0.25;
+		this.stride += dt;
+	};
+
+	/* Object. */
+	function makeHumanoid(material) {
+		var object = new THREE.Object3D();
+
+		var head = new THREE.Mesh(headGeometry, material);
+		head.position.y = 8;
+		head.position.z = -9.5;
+		object.add(head);
+
+		var shoulders = new THREE.Mesh(shoulderGeometry, material);
+		shoulders.position.y = 35;
+		object.add(shoulders);
+
+		var torso = new THREE.Mesh(torsoGeometry, material);
+		object.add(torso);
+
+		var leftArm = new THREE.Mesh(armGeometry, material);
+		leftArm.position.x = -25;
+		leftArm.position.y = 32;
+		leftArm.position.z = -7.5;
+		object.add(leftArm);
+
+		var rightArm = new THREE.Mesh(armGeometry, material);
+		rightArm.position.x = 25;
+		rightArm.position.y = 32;
+		rightArm.position.z = -7.5;
+		object.add(rightArm);
+
+		var leftLeg = new THREE.Mesh(legGeometry, material);
+		leftLeg.position.x = -8;
+		leftLeg.position.y = -33;
+		leftLeg.position.z = -7.5;
+		object.add(leftLeg);
+
+		var rightLeg = new THREE.Mesh(legGeometry, material);
+		rightLeg.position.x = 8;
+		rightLeg.position.y = -33;
+		rightLeg.position.z = -7.5;
+		object.add(rightLeg);
+
+		object.walkAnim = new WalkAnim(head, leftArm, rightArm, leftLeg, rightLeg);
+
+		object.castShadow = true;
+		object.receiveShadow = true;
+
+		return object;
+	}
+
+	/* Floor plane. */
+	var geometry = new THREE.PlaneGeometry(1500, 1500, 150, 150);
+	var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x7f7f7f }));
+	mesh.position.z = -820;
+	mesh.receiveShadow = true;
+	scene.add(mesh);
+
+	/* Light. */
+
+	function makeFlashlight() {
+		var flashlight = new THREE.SpotLight(0xffff66);
+		flashlight.castShadow = true;
+		flashlight.intensity = 2;
+		flashlight.shadowDarkness = 1;
+		flashlight.shadowCameraNear = 10;
+		flashlight.shadowCameraFar = 750;
+		flashlight.shadowCameraFov = 15;
+		scene.add(flashlight);
+		return flashlight;
+	}
+
+	// FIXME: We have to add the lights to the scene to keep it from crashing.
+	var flashlight = makeFlashlight();
+
+	function makeHighlight() {
+		var highlight = new THREE.SpotLight(0xffff66);
+		highlight.castShadow = true;
+		highlight.intensity = 0.5;
+		scene.add(highlight);
+		return highlight;
+	}
+
+	var highlight = makeHighlight();
+
+	function makeFlash() {
+		var flash = new THREE.SpotLight(0xffffff);
+		flash.castShadow = true;
+		flash.intensity = 0;
+		flash.shadowDarkness = 1;
+		flash.shadowCameraNear = 10;
+		flash.shadowCameraFar = 25;
+		flash.shadowCameraFov = 2;
+		scene.add(flash);
+		return flash;
+	}
+
+	var nextFlash = 0;
+	// FIXME: Firefox hangs if we call makeFlash more than once.
+	var flashes = [];
+	flashes.push(makeFlash());
+
+	var playerObjects = {};
+	var enemyObjects = [];
+	var shotObjects = [];
+
+	function render() {
+		// NOTE: The AI segment and specialized cameras are part of the CI219 submission.
+		if (self && self.name.substring(0, 5) == '[Bot]') {
+			doAI();
+
+			// Change to a corner camera if the bot is near a corner.
+			// Bottom-Left.
+			if (self.x < 150 && self.y > 350) {
+				camera.position.set(-800, -800, -550);
+				camera.rotation.set(Math.PI / 2, -Math.PI / 4, 0);
+			// Top-Left.
+			} else if (self.x < 150 && self.y < 150) {
+				camera.position.set(-800, 800, -550);
+				camera.rotation.set(-Math.PI / 2, -Math.PI / 4, Math.PI);
+			// Top-Right.
+			} else if (self.x > 350 && self.y < 150) {
+				camera.position.set(800, 800, -550);
+				camera.rotation.set(-Math.PI / 2, Math.PI / 4, Math.PI);
+			// Bottom-Right.
+			} else if (self.x > 350 && self.y > 350) {
+				camera.position.set(800, -800, -550);
+				camera.rotation.set(Math.PI / 2, Math.PI / 4, 0);
+			} else {
+				camera.position.set(0, 0, 300);
+				camera.rotation.set(0, 0, 0);
+			}
+		}
+
+		for (var player in players) {
+			if (!players.hasOwnProperty(player)) continue;
+			player = players[player];
+
+			if (player.health <= 0) {
+				scene.remove(playerObjects[player.name].humanoid);
+				scene.remove(playerObjects[player.name].flashlight);
+				scene.remove(playerObjects[player.name].highlight);
+				delete players[player.name];
+			}
+
+			// Simulate.
+			player.x += player.vx * dt;
+			player.y += player.vy * dt;
+
+			// Render.
+			var so = playerObjects[player.name]; // Scene objects.
+			if (!so) {
+				so = {
+					humanoid: makeHumanoid(playerMaterial),
+					flashlight: flashlight,
+					highlight: highlight
+				};
+
+				so.humanoid.position.z = -720;
+				so.humanoid.rotation.x = 0.5 * Math.PI;
+				scene.add(so.humanoid);
+
+				flashlight = makeFlashlight();
+				highlight = makeHighlight();
+
+				playerObjects[player.name] = so;
+			}
+
+			so.humanoid.position.x = (player.x - 250) * 2;
+			so.humanoid.position.y = -(player.y - 250) * 2;
+
+			so.flashlight.position.set(so.humanoid.position.x, so.humanoid.position.y, -650);
+			if (player.vx || player.vy) { so.rx = player.vx; so.ry = player.vy; }
+			so.flashlight.target.position.set(so.humanoid.position.x + so.rx, so.humanoid.position.y + -so.ry, -820);
+
+			so.highlight.position.set(so.humanoid.position.x, so.humanoid.position.y, -550);
+			so.highlight.target.position.set(so.humanoid.position.x, so.humanoid.position.y, -820);
+
+			// Animate.
+			if (player.vx || player.vy) {
+				if (player.vy == 0) so.humanoid.rotation.y = player.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
+				else so.humanoid.rotation.y = Math.atan2(player.vx, player.vy);
+				so.humanoid.walkAnim.update(dt);
+			} else {
+				so.humanoid.walkAnim.reset();
+				so.humanoid.walkAnim.update(dt);
+			}
+		}
+
+		enemies.forEach(function (enemy) {
+			if (enemy.dead) {
+				scene.remove(enemyObjects[enemy.id]);
+				delete enemies[enemy.id];
+				return;
+			}
+
+			// Simulate.
+			enemy.x += enemy.vx * dt;
+			enemy.y += enemy.vy * dt;
+
+			// Render.
+			// TODO: Refactor into renderHumanoid.
+			var humanoid = enemyObjects[enemy.id];
+			if (!humanoid) {
+				humanoid = enemyObjects[enemy.id] = makeHumanoid(enemyMaterial);
+				humanoid.position.z = -780 + 60 * enemy.size / 12;
+				humanoid.rotation.x = 0.5 * Math.PI;
+				humanoid.scale.x = enemy.size / 12;
+				humanoid.scale.y = enemy.size / 12;
+				humanoid.scale.z = enemy.size / 12;
+				scene.add(humanoid);
+			}
+
+			humanoid.position.x = (enemy.x - 250) * 2;
+			humanoid.position.y = -(enemy.y - 250) * 2;
+
+			if (enemy.vx || enemy.vy) {
+				if (enemy.vy == 0) humanoid.rotation.y = enemy.vx > 0 ? 0.5 * Math.PI : 1.5 * Math.PI;
+				else humanoid.rotation.y = Math.atan2(enemy.vx, enemy.vy);
+				humanoid.walkAnim.update(dt);
+			} else {
+				humanoid.walkAnim.reset();
+				humanoid.walkAnim.update(dt);
+			}
+		});
+
+		flashes.forEach(function (flash) {
+			if (flash.intensity > 0) {
+				flash.intensity -= 2;
+				flash.color.setHex((0xffffff * flash.intensity / 10) + (0xff4500 * (1 - flash.intensity / 10)));
+			}
+		});
+
+		shots.forEach(function (shot) {
+			var so = shotObjects[shot.id];
+			if (!so) {
+				so = shotObjects[shot.id] = flashes[nextFlash++ % flashes.length];
+				so.intensity = 10;
+				so.position.set((shot.x - 250) * 2, -(shot.y - 250) * 2, -760);
+				so.target.position.set(so.position.x + shot.vx, so.position.y + -shot.vy, -820);
+			}
+		});
+
+		// HACK: We clear the walls array after adding them to the scene because no other code touches walls.
+		walls.forEach(function (wall) {
+			var material = new THREE.MeshLambertMaterial({ color: 0x7f7f7f });
+			var geometry = new THREE.CubeGeometry(wall.w * 2, wall.h * 2, 120);
+			var mesh = new THREE.Mesh(geometry, material);
+			mesh.position.set((250 - wall.x) * 2, -(250 - wall.y) * 2, -820);
+			//mesh.receiveShadow = true;
+			scene.add(mesh);
+		});
+		walls = [];
+
+		//requestAnimationFrame(render);
+		renderer.render(scene, camera);
+	}
+
+	// TODO: Use requestAnimationFrame.
+	renderInterval = setInterval(render, dt * 1000);
+}());
+
+/* AI. */
+// NOTE: The AI segment and specialized cameras are part of the CI219 submission.
+
+var targetEnemy;
+var enemyAngle;
+var enemyDistance;
+var nextFire = 0; // Number of frames until we can next fire.
+var ox = 0, oy = 0;   // Orientation.
+
+function angleTo(from, to) {
+	if (from.y == to.y) return from.x > to.x ? 0 : Math.PI;
+	else return Math.atan2(to.y - from.y, to.x - from.x);
+}
+
+function doAI() {
+	var approachSpeed = 0.1;
+	var retreatSpeed = 1;
+
+	if (self.health <= 0) return;
+	nextFire--;
+
+	if (self.vx || self.vy) { ox = self.vx; oy = self.vy; }
+
+	if (!targetEnemy) {
+		var d2;
+		enemies.forEach(function (enemy) {
+			var dx = self.x - enemy.x;
+			var dy = self.y - enemy.y;
+			var d = dx * dx + dy * dy;
+			if (!d2 || d < d2) {
+				d2 = d;
+				targetEnemy = enemy;
+			}
+		});
+
+		if (targetEnemy) {
+			// Ignore enemies that we can not see.
+			// TODO: How big is the flashlight's field of view?
+			// TODO: How big is the highlight's field of view?
+			enemyAngle = angleTo(self, targetEnemy);
+			var aimAngle = angleTo(self, { x: self.x + ox, y: self.y + oy });
+			enemyDistance = Math.sqrt(d2);
+			if (Math.abs(enemyAngle - aimAngle) < Math.PI / 6) {
+				if (enemyDistance > 150) targetEnemy = undefined;
+			} else {
+				if (enemyDistance > 75) targetEnemy = undefined;
+			}
+		}
+	}
+
+	if (targetEnemy) {
+		// TODO: Rotate towards the enemy.
+		/*var rot = 0;
+		if (enemyAngle > 0) rot = Math.min(enemyAngle, 0.01);
+		if (enemyAngle < 0) rot = Math.max(enemyAngle, -0.01);*/
+
+		// If we can shoot and we are reasonably far from the enemy we should approach it.
+		if (nextFire <= 0 && enemyDistance > 20) {
+			self.ix = (targetEnemy.x - self.x) / enemyDistance * approachSpeed;
+			self.iy = (targetEnemy.y - self.y) / enemyDistance * approachSpeed;
+			self.ia = true;
+			nextFire = 70; // NOTE: Technically this is 60, but we want to account for possible lag.
+		// Otherwise we should retreat.
+		// TODO: Not run ourselves into corners.
+		// NOTE: We don't change direction for a while after firing.
+		} else if (nextFire < 40) {
+			self.ix = (self.x - targetEnemy.x) / enemyDistance * retreatSpeed;
+			self.iy = (self.y - targetEnemy.y) / enemyDistance * retreatSpeed;
+			self.ia = false;
+		}
+
+		sendState();
+
+		// TODO: Only undefine targetEnemy if we have killed him?
+		targetEnemy = undefined;
+	}
+}
+
+// WARNING: Simulation is done here too.
+/*function render() {
+	var canvas = document.getElementById('viewport');
+	canvas.width = canvas.width;
+	var context = canvas.getContext('2d');
+	for (var player in players) {
+		if (!players.hasOwnProperty(player)) continue;
+		var p = players[player];
+		p.x += p.vx * dt;
+		p.y += p.vy * dt;
+		context.fillStyle = 'rgb(' + Math.floor(255 / 100 * p.health) + ',' + Math.floor(127 / 100 * p.health) + ',0)';
+		context.beginPath();
+		context.arc(p.x, p.y, p.size, 0, 2 * Math.PI, false);
+		context.fill();
+	}
+
+	walls.forEach(function (wall) {
+		context.fillStyle = '#000000';
+		context.beginPath();
+		context.rect(wall.x - wall.w / 2, wall.y - wall.h / 2, wall.w, wall.h);
+		context.fill();
+	});
+
+	enemies.forEach(function (enemy) {
+		enemy.x += enemy.vx * dt;
+		enemy.y += enemy.vy * dt;
+		context.fillStyle = '#3faf3f';
+		context.beginPath();
+		context.arc(enemy.x, enemy.y, enemy.size, 0, 2 * Math.PI, false);
+		context.fill();
+	});
+
+	shots.forEach(function (shot) {
+		context.fillStyle = '#7f7fff';
+		context.beginPath();
+		context.arc(shot.x, shot.y, 4, 0, 2 * Math.PI, false);
+		context.fill();
+	});
+}
+
+renderInterval = setInterval(render, dt * 1000);*/
+</script>
+</body>
+</html>
