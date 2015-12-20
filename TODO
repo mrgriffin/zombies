@@ -1,0 +1,32 @@
+// TODO: generate Packets automatically (both the JS and Java)
+// TODO: generate www/js/gauntlet.js automatically from the other sources in www/js (and minify)
+// TODO: have a dist/www directory that contains the files that http.Server should grant access to?  have a config file that specifies them instead?
+
+make the handleX methods deterministic.  provide a handleAll(handler) method on connection.
+
+onInputsChanged -> sendState
+stateEntropy > ? -> sendState
+
+Locally simulate the states!!
+
+Allow players to rejoin the server
+
+Imbue each packet with a sequence number and drop the old states sent to the server
+
+MAKE THE HUD BACKGROUND PULSE RED WHEN WE ARE HIT
+
+ROTATE TO THE NEW ANGLE RATHER THAN SNAPPING
+
+ANIMATE RESET SHOULD PUT US STANDING STILL NOT MID-STRIDE!!
+
+HAVE COFFINS POP UP FROM THE GROUND
+
+SEND NOCACHE ON /update to prevent the browser from caching in offine mode :(
+
+allow another client to spectate the ongoing game
+
+SEND EnemyAttack packet so that we can animate an attack
+
+player death domain logic lives in AJAXConnection & index. Server never realizes the player is dead!
+
+The game starts with no players!!!
